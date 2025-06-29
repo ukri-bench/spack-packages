@@ -1,3 +1,4 @@
 repo_index:
   paths:
-  - packages
+  - spack_pkgs/spack_repo/ukri_bench
+

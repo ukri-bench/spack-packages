@@ -25,14 +25,12 @@ class BenchDolfinx(CMakePackage, CudaPackage, ROCmPackage):
     depends_on("py-fenics-ufl@main", type="build")
 
     depends_on("boost+program_options")
-    depends_on("mpi")
-    depends_on("hip", when="+rocm")
-    depends_on("cuda", when="+cuda")
     depends_on("jsoncpp")
+    depends_on("mpi")
 
-    conflicts("+cuda", when="+rocm", msg="Cannot build for both ROCm and CUDA")
-
-    variant("fp32", default=False, description="Build for float32 scalar type")
+    depends_on("cuda", when="+cuda")
+    depends_on("hip", when="+rocm")
+    conflicts("+cuda", when="+rocm", msg="Cannot build for both ROCm and CUDA.")
 
     with when("+rocm"):
         depends_on("rocm-core")
@@ -41,11 +39,11 @@ class BenchDolfinx(CMakePackage, CudaPackage, ROCmPackage):
     root_cmakelists_dir = "src"
 
     def cmake_args(self):
-        args = [
-            self.define("SCALAR_TYPE", "float32" if "+fp32" in self.spec else "float64")
-        ]
+        args = []
         if "+rocm" in self.spec:
-            args += [self.define("HIP_ARCH", self.spec.variants["amdgpu_target"].value)]
+            args.append(
+                self.define("HIP_ARCH", self.spec.variants["amdgpu_target"].value)
+            )
         if "+cuda" in self.spec:
-            args += [self.define("CUDA_ARCH", self.spec.variants["cuda_arch"].value)]
+            args.append(self.define("CUDA_ARCH", self.spec.variants["cuda_arch"].value))
         return args

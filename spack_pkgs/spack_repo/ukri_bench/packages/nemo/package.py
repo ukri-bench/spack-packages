@@ -2,6 +2,9 @@ import os
 import sys
 import textwrap
 from pathlib import Path
+
+from spack_repo.builtin.build_systems.generic import Package
+
 from spack.package import *
 
 
@@ -207,7 +210,7 @@ class Nemo(Package):
             %HDF5_HOME           {h5dir}
             %XIOS_HOME           {xiosdir}
             %PSYCLONE_HOME       {psydir}
-            
+
             %NCDF_INC            -I%NCDFF_HOME/include
             %NCDF_LIB            -L%NCDFF_HOME/lib -lnetcdff -L%NCDFC_HOME/lib -lnetcdf -L%HDF5_HOME/lib -lhdf5_hl -lhdf5 -lhdf5
             %XIOS_INC            -I%XIOS_HOME/inc
@@ -215,7 +218,7 @@ class Nemo(Package):
             %CPP	             cpp -Dkey_nosignedzero
             %FC                  {fcompiler}
             %PROD_FCFLAGS        {fflags}
-            %DEBUG_FCFLAGS       
+            %DEBUG_FCFLAGS
             %FFLAGS
             %LD                  {fcompiler}
             %LDFLAGS             {ldflags} -Wl,-rpath=%HDF5_HOME/lib -Wl,-rpath=%NCDFF_HOME/lib -Wl,-rpath=%XIOS_HOME/lib

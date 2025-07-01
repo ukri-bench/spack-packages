@@ -1,0 +1,69 @@
+diff --git a/makenemo b/makenemo
+index 780296cc..0531e79d 100755
+--- a/makenemo
++++ b/makenemo
+@@ -210,20 +210,7 @@ NEMO_DIR=${MAIN_DIR}/${x_s}
+ # If required, test if the selected source-code transformation is available
+ # (exit with error if not); if requested, print list of available source-code
+ # transformations and exit
+-PSCT_VAR=''
+-if [ -n "${x_p}" ]; then
+-    [ "${x_p}" == 'all' ] && echo "Available source-code transformations"
+-    for fsct in ${MAIN_DIR}/sct/psct-*.py; do
+-        if [ -f "${fsct}" ]; then
+-            tname=$(basename "${fsct}" .py)
+-            [ "${x_p}" == 'all' ]            && echo " - ${tname#psct-}"
+-            [ "${x_p}" == "${tname#psct-}" ] && PSCT_VAR=${tname#psct-}
+-        fi
+-    done
+-    [ "${x_p}" == 'passthrough' ] && PSCT_VAR='passthrough'
+-    [ "${x_p}" == 'all' ] && echo " - passthrough" && exit 0
+-    [ -z "${PSCT_VAR}" ] && echo "Error: source-code transformation ${x_p} is not available" && exit 1
+-fi
++PSCT_VAR=${x_p}
+ 
+ # Load environment if exists
+ env_file=`find ${MAIN_DIR}/arch -name arch-${CMP_NAM}.env`
+@@ -412,12 +399,7 @@ l_bldvar_p=0
+ l_bldvar_n=${x_nocdf}
+ # Flag up AGRIF processing
+ grep key_agrif ${NEMO_TDIR}/${CUR_CONF}/BLD/cpp.fcm 2>/dev/null && l_bldvar_a=1
+-# Flag up PSyclone (https://github.com/stfc/PSyclone) source-code processing
+-if [[ -z "${x_p}" && -n "$( grep -e '\bkey_PSYCLONE_2p5p0\b' ${NEMO_TDIR}/${CUR_CONF}/BLD/cpp.fcm )" ]]; then
+-    x_p='passthrough'; PSCT_VAR='passthrough'
+-    echo
+-    echo "Warning: activated PSyclone source-code processing, required by CPP key 'key_PSYCLONE_2p5p0'"
+-fi
++
+ if [ -n "${x_p}" ]; then
+     l_bldvar_p=1
+     echo
+@@ -477,28 +459,6 @@ if [ "${NBR_PRC}" -gt 0 ]; then
+         # Preparation of the build-configuration files and specific settings for the source-code transformation stages
+         if [[ ${NEMO_BLD_STAGE} == 'BLD_SCT_PSYCLONE' ]]; then
+             NEMO_FC="${COMPIL_DIR}/sct_psyclone.sh \"%PSYCLONE_HOME\" \"${PSCT_VAR}\""
+-            # Copy PSyclone transformation script (if required)
+-            if [[ "${PSCT_VAR}" != 'passthrough' ]]; then
+-                cp "sct/psct-${PSCT_VAR}.py" ${NEMO_TDIR}/${CUR_CONF}/${NEMO_BLD_STAGE}/
+-                # Process inclusion directives in the PSyclone transformation script (if any):
+-                #    - search for directives of the form '#psct-include(<MODULE>)' at the beginning of lines;
+-                #    - copy the included PSyclone transformation scripts (sct/psct-<MODULE>.py) into the build directory if they
+-                #      exist (exit with an error message if not);
+-                #    - replace the directives with suitable Python 'import' statements to make the 'trans' procedures of the
+-                #      included PSyclone transformation scripts accessible from the top-level script as 'trans_<MODULE>'.
+-                for psct_inc in $( grep -e '^#psct-include([a-zA-Z0-9]\+)[[:space:]]*$' "sct/psct-${PSCT_VAR}.py" | cut -d '(' -f 2 | cut -d ')' -f 1 ); do
+-                    if [[ -f "sct/psct-${psct_inc}.py" ]]; then
+-                        cp "sct/psct-${psct_inc}.py" ${NEMO_TDIR}/${CUR_CONF}/${NEMO_BLD_STAGE}/psct_include_${psct_inc}.py
+-                        sed -i -e "s/^#psct-include(\([a-zA-Z0-9]\+\))[[:space:]]*\$/from psct_include_\1 import trans as trans_\1/" \
+-                            ${NEMO_TDIR}/${CUR_CONF}/${NEMO_BLD_STAGE}/psct-${PSCT_VAR}.py
+-                    else
+-                        echo "Error: PSyclone transformation ${psct_inc} is unavailable for inclusion into PSyclone super-transformation script ${PSCT_VAR}"
+-                        exit 1
+-                    fi
+-                done
+-            fi
+-            # Note, the AGRIF-processing configuration with a slight
+-            # modification can be used
+             sed -e "/agrif2model/d" ${COMPIL_DIR}/bld_preproagr.cfg > ${NEMO_TDIR}/${CUR_CONF}/${NEMO_BLD_STAGE}/bld.cfg
+         fi
+         if [[ ${NEMO_BLD_STAGE} == 'BLD_AGRIFLIB' ]]; then

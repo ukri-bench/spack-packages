@@ -1,3 +1,7 @@
+# Copyright 2025 Aditya Sadawarte
+#
+# SPDX-License-Identifier: (Apache-2.0 OR MIT)
+
 import os
 import sys
 import textwrap

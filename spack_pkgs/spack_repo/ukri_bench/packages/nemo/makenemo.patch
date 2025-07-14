@@ -1,3 +1,7 @@
+# Copyright 2025 Aditya Sadawarte
+#
+# SPDX-License-Identifier: (Apache-2.0 OR MIT)
+
 diff --git a/makenemo b/makenemo
 index 780296cc..0531e79d 100755
 --- a/makenemo

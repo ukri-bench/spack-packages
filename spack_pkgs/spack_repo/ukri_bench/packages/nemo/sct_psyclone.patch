@@ -1,3 +1,7 @@
+# Copyright 2025 Aditya Sadawarte
+#
+# SPDX-License-Identifier: (Apache-2.0 OR MIT)
+
 diff --git a/mk/sct_psyclone.sh b/mk/sct_psyclone.sh
 index 72b93573..c6be4cbd 100755
 --- a/mk/sct_psyclone.sh

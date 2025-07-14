@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
 
+# Copyright 2025 Aditya Sadawarte
+#
+# SPDX-License-Identifier: (Apache-2.0 OR MIT)
+
+
 import os
 import argparse
 import textwrap

@@ -143,7 +143,7 @@ def main():
               -e "s/(jpnj[ ]*=[ ]*)([0-9]+)/\\1${{JPROC}}/" \\
               -e "s/(nn_itend[ ]*=[ ]*)([0-9]+)/\\1${{RUNLEN}}/" ${{RUN_DIR}}/namelist_cfg
     
-    if [[ ${{TIMING}} -eq 1 ]]; then
+    if [[ ${{TIMINGS}} -eq 1 ]]; then
       f90nml -g namctl -v ln_timing=true ${{RUN_DIR}}/namelist_cfg ${{RUN_DIR}}/namelist_cfg
     else
       f90nml -g namctl -v ln_timing=false ${{RUN_DIR}}/namelist_cfg ${{RUN_DIR}}/namelist_cfg

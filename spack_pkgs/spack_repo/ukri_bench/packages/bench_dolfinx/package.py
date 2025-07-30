@@ -22,7 +22,6 @@ class BenchDolfinx(CMakePackage, CudaPackage, ROCmPackage):
 
     depends_on("fenics-dolfinx@main")
     depends_on("py-fenics-ffcx@main", type="build")
-    depends_on("py-fenics-ufl@main", type="build")
 
     depends_on("boost+program_options")
     depends_on("jsoncpp")

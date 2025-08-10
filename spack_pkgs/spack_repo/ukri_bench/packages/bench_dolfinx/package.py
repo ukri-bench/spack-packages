@@ -33,9 +33,12 @@ class BenchDolfinx(CMakePackage, CudaPackage, ROCmPackage):
     conflicts("+cuda", when="+rocm", msg="Cannot build for both ROCm and CUDA.")
 
     with when("+cuda"):
-        conflicts("^openmpi~cuda")  # Require CUDA enabled OpenMPI
+        conflicts("^mpich~cuda")  # Require CUDA enabled MPI
+        conflicts("^openmpi~cuda")  # Require CUDA enabled MPI
 
     with when("+rocm"):
+        conflicts("^mpich~rocm")  # Require ROCm enabled MPI
+        conflicts("^openmpi~rocm")  # Require ROCm enabled MPI
         depends_on("rocm-core")
         depends_on("rocthrust")
 

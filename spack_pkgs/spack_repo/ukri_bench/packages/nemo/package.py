@@ -77,10 +77,6 @@ class Nemo(Package):
         "+xios", msg="The XIOS spack package is currently broken and cannot be used"
     )
     conflicts(
-        "+openmp",
-        msg="The py-psyclone package is currently broken with spackv0.23.1, change if newer versions work",
-    )
-    conflicts(
         "config=GENERIC",
         when="generic_config=none",
         msg="generic_config should be set when using config=GENERIC",

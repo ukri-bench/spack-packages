@@ -139,9 +139,9 @@ def main():
       find ${{p}} -type f -exec ln -s {{}} ${{RUN_DIR}} \\;
     done
    
-    sed -r -i -e "s/(jpni[ ]*=[ ]*)([0-9]+)/\\1${{IPROC}}/" \\
-              -e "s/(jpnj[ ]*=[ ]*)([0-9]+)/\\1${{JPROC}}/" \\
-              -e "s/(nn_itend[ ]*=[ ]*)([0-9]+)/\\1${{RUNLEN}}/" ${{RUN_DIR}}/namelist_cfg
+    f90nml -g nammpp -v jpni=${{IPROC}} ${{RUN_DIR}}/namelist_cfg ${{RUN_DIR}}/namelist_cfg
+    f90nml -g nammpp -v jpnj=${{JPROC}} ${{RUN_DIR}}/namelist_cfg ${{RUN_DIR}}/namelist_cfg
+    f90nml -g namrun -v nn_itend=${{RUNLEN}} ${{RUN_DIR}}/namelist_cfg ${{RUN_DIR}}/namelist_cfg
     
     if [[ ${{TIMINGS}} -eq 1 ]]; then
       f90nml -g namctl -v ln_timing=true ${{RUN_DIR}}/namelist_cfg ${{RUN_DIR}}/namelist_cfg

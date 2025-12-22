@@ -20,9 +20,9 @@ class BenchDolfinx(CMakePackage, CudaPackage, ROCmPackage):
     depends_on("c", type="build")
     depends_on("cxx", type="build")
 
-    depends_on("fenics-dolfinx@main")
-    depends_on("fenics-basix@main")
-    depends_on("py-fenics-ffcx@main", type="build")
+    depends_on("fenics-dolfinx@0.10")
+    depends_on("fenics-basix)
+    depends_on("py-fenics-ffcx", type="build")
 
     depends_on("boost@:1.86 +program_options")  # See https://github.com/boostorg/math/issues/1285
     depends_on("jsoncpp")

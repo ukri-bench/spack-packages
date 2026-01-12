@@ -52,7 +52,7 @@ class Nemo(Package):
     )
     variant("xios", default=False, description="Enable XIOS IO server support")
     variant(
-        "openmp",
+        "omp",
         default=False,
         description="Apply OpenMP transforms to NEMO through PSyclone",
     )
@@ -110,7 +110,7 @@ class Nemo(Package):
     depends_on("netcdf-c@4.9.0: +mpi +shared", type=("build", "link"))
     depends_on("netcdf-fortran@4.6.1: +shared", type="build")
     depends_on("py-f90nml", type="run")
-    depends_on("py-psyclone", type="build", when="+openmp")
+    depends_on("py-psyclone", type="build", when="+omp")
 
     # --- Patches ---
     patch("makenemo.patch")
@@ -148,7 +148,7 @@ class Nemo(Package):
     def setup_build_environment(self, env):
         if self.spec.satisfies("+xios"):
             env.set("XIOS_PATH", self.spec["xios"].prefix)
-        if self.spec.satisfies("+openmp"):
+        if self.spec.satisfies("+omp"):
             utilspath = join_path(
                 self.spec["py-psyclone"].prefix.share,
                 "psyclone",
@@ -172,7 +172,7 @@ class Nemo(Package):
         if spec.satisfies("+xios"):
             xiosdir = str(spec["xios"].prefix)
 
-        if spec.satisfies("+openmp"):
+        if spec.satisfies("+omp"):
             psydir = str(spec["py-psyclone"].prefix)
 
         # TODO: Add -march, check how spack does it
@@ -180,26 +180,26 @@ class Nemo(Package):
         if spec.satisfies("%gcc"):
             fflags = "-fdefault-real-8 -O2 -funroll-all-loops -fcray-pointer -ffree-line-length-none"
             ldflags = "-fdefault-real-8"
-            if spec.satisfies("+openmp"):
+            if spec.satisfies("+omp"):
                 fflags += " -fopenmp"
                 ldflags += " -fopenmp"
         elif spec.satisfies("%nvhpc"):
             fflags = "-i4 -Mr8 -Mnovect -Mflushz -Minline -Mnofma -O2 -gopt -traceback"
             ldflags = "-i4 -Mr8 -Mnofma"
-            if spec.satisfies("+openmp"):
+            if spec.satisfies("+omp"):
                 fflags += " -mp"
                 ldflags += " -mp"
         elif spec.satisfies("%oneapi"):
             fflags = "-i4 -r8 -O2 -fp-model strict -xHost -fno-alias"
             ldflags = "-i4 -r8"
-            if spec.satisfies("+openmp"):
+            if spec.satisfies("+omp"):
                 fflags += " -fiopenmp"
                 ldflags += " -fiopenmp"
         elif spec.satisfies("%cce"):
             fflags = "-em -s integer32 -s real64 -O2 -hvector_classic -hflex_mp=intolerant -N1023 -M878"
             ldflags = ""
             arch_extra = "bld::tool::fc_modsearch -J"
-            if spec.satisfies("+openmp"):
+            if spec.satisfies("+omp"):
                 fflags += " -h omp"
                 ldflags += " -h omp"
 
@@ -282,7 +282,7 @@ class Nemo(Package):
         params.append("-m")
         params.append(f"fort")
 
-        if self.spec.satisfies("+openmp"):
+        if self.spec.satisfies("+omp"):
             trans = join_path(
                 self.spec["py-psyclone"].prefix.share,
                 "psyclone",

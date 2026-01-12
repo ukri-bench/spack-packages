@@ -172,36 +172,24 @@ class Nemo(Package):
         if spec.satisfies("+xios"):
             xiosdir = str(spec["xios"].prefix)
 
-        if spec.satisfies("+omp"):
-            psydir = str(spec["py-psyclone"].prefix)
-
-        # TODO: Add -march, check how spack does it
-
         if spec.satisfies("%gcc"):
             fflags = "-fdefault-real-8 -O2 -funroll-all-loops -fcray-pointer -ffree-line-length-none"
             ldflags = "-fdefault-real-8"
-            if spec.satisfies("+omp"):
-                fflags += " -fopenmp"
-                ldflags += " -fopenmp"
         elif spec.satisfies("%nvhpc"):
             fflags = "-i4 -Mr8 -Mnovect -Mflushz -Minline -Mnofma -O2 -gopt -traceback"
             ldflags = "-i4 -Mr8 -Mnofma"
-            if spec.satisfies("+omp"):
-                fflags += " -mp"
-                ldflags += " -mp"
         elif spec.satisfies("%oneapi"):
             fflags = "-i4 -r8 -O2 -fp-model strict -xHost -fno-alias"
             ldflags = "-i4 -r8"
-            if spec.satisfies("+omp"):
-                fflags += " -fiopenmp"
-                ldflags += " -fiopenmp"
         elif spec.satisfies("%cce"):
             fflags = "-em -s integer32 -s real64 -O2 -hvector_classic -hflex_mp=intolerant -N1023 -M878"
             ldflags = ""
             arch_extra = "bld::tool::fc_modsearch -J"
-            if spec.satisfies("+omp"):
-                fflags += " -h omp"
-                ldflags += " -h omp"
+
+        if spec.satisfies("+omp"):
+            psydir = str(spec["py-psyclone"].prefix)
+            fflags += f" {self.compiler.openmp_flag}"
+            ldflags += f" {self.compiler.openmp_flag}"
 
         arch = textwrap.dedent(
             f"""

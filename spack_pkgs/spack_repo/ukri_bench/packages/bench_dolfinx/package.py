@@ -20,7 +20,7 @@ class BenchDolfinx(CMakePackage, CudaPackage, ROCmPackage):
     depends_on("c", type="build")
     depends_on("cxx", type="build")
 
-    depends_on("fenics-dolfinx@0.10")
+    depends_on("fenics-dolfinx@0.10 partitioners=scotch")
     depends_on("fenics-basix")
     depends_on("py-fenics-ffcx", type="build")
 

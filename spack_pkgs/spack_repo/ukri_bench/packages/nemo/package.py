@@ -56,8 +56,14 @@ class Nemo(Package):
         default=False,
         description="Apply OpenMP transforms to NEMO through PSyclone",
     )
-    # TODO: Add GPU support
-    # variant('openmp-offload', default=False, description='Apply OpenMP GPU transforms to NEMO through PSyclone')
+    variant("omp_offload", default=False, when="+omp", description="Enable OpenMP offloading to the GPU")
+    variant(
+        "omp_flags",
+        values=str,
+        default="none",
+        when="+omp",
+        description="If omp_offload is enabled, this *overrides* the default omp flags",
+    )
     variant(
         "config",
         default="ORCA2_ICE_PISCES",
@@ -80,6 +86,11 @@ class Nemo(Package):
         "config=GENERIC",
         when="generic_config=none",
         msg="generic_config should be set when using config=GENERIC",
+    )
+    conflicts(
+        "omp_flags=none",
+        when="+omp_offload",
+        msg="OpenMP requires offload flags to be specfied by omp_flags when omp_offload is enabled",
     )
 
     for key, value in nmconfigs.items():
@@ -171,6 +182,8 @@ class Nemo(Package):
 
         if spec.satisfies("+xios"):
             xiosdir = str(spec["xios"].prefix)
+        if spec.satisfies("+omp"):
+            psydir = str(spec["py-psyclone"].prefix)
 
         if spec.satisfies("%gcc"):
             fflags = "-fdefault-real-8 -O2 -funroll-all-loops -fcray-pointer -ffree-line-length-none"
@@ -186,10 +199,13 @@ class Nemo(Package):
             ldflags = ""
             arch_extra = "bld::tool::fc_modsearch -J"
 
-        if spec.satisfies("+omp"):
-            psydir = str(spec["py-psyclone"].prefix)
+        if spec.satisfies("+omp~omp_offload"):
             fflags += f" {self.compiler.openmp_flag}"
             ldflags += f" {self.compiler.openmp_flag}"
+        elif spec.satisfies("+omp+omp_offload"):
+            offload_flags = self.spec.variants["omp_flags"].value
+            fflags += f" {offload_flags}"
+            ldflags += f" {offload_flags}"
 
         arch = textwrap.dedent(
             f"""
@@ -277,8 +293,13 @@ class Nemo(Package):
                 "examples",
                 "nemo",
                 "scripts",
-                "omp_cpu_trans.py",
             )
+
+            if self.spec.satisfies("~omp_offload"):
+                trans = join_path(trans, "omp_cpu_trans.py")
+            elif self.spec.satisfies("+omp_offload"):
+                trans = join_path(trans, "omp_gpu_trans.py")
+
             params.append("-p")
             params.append(trans)
 

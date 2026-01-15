@@ -64,6 +64,13 @@ class Nemo(Package):
         when="+omp",
         description="If omp_offload is enabled, this *overrides* the default omp flags",
     )
+    # TODO: Add non-nvhpc support for reproducibility
+    variant(
+        "reproducible",
+        default=False,
+        description="Disables optimisations to generate reproducible results on CPU and GPU",
+        when="%nvhpc"
+    )
     variant(
         "config",
         default="ORCA2_ICE_PISCES",
@@ -168,6 +175,8 @@ class Nemo(Package):
                 "scripts",
             )
             env.prepend_path("PYTHONPATH", utilspath)
+            if self.spec.satisfies("+omp_offload+reproducible"):
+                env.set("REPRODUCIBLE", "True") # only supported on Nvidia GPUs
 
     def configure(self, spec, prefix):
         ar = join_path(spec["binutils"].prefix.bin, "ar")
@@ -179,6 +188,8 @@ class Nemo(Package):
         xiosdir = ""
         psydir = ""
         arch_extra = ""
+        fflags = ""
+        ldflags = ""
 
         if spec.satisfies("+xios"):
             xiosdir = str(spec["xios"].prefix)
@@ -187,16 +198,16 @@ class Nemo(Package):
 
         if spec.satisfies("%gcc"):
             fflags = "-fdefault-real-8 -O2 -funroll-all-loops -fcray-pointer -ffree-line-length-none"
-            ldflags = "-fdefault-real-8"
         elif spec.satisfies("%nvhpc"):
-            fflags = "-i4 -Mr8 -Mnovect -Mflushz -Minline -Mnofma -O2 -gopt -traceback"
-            ldflags = "-i4 -Mr8 -Mnofma"
+            fflags = "-i4 -Mr8 -Minline"
+            if spec.satisfies("+reproducible"):
+                fflags += " -O2 -Mnovect -Mflushz -Mnofma"
+            else:
+                fflags += " -O3"
         elif spec.satisfies("%oneapi"):
             fflags = "-i4 -r8 -O2 -fp-model strict -xHost -fno-alias"
-            ldflags = "-i4 -r8"
         elif spec.satisfies("%cce"):
             fflags = "-em -s integer32 -s real64 -O2 -hvector_classic -hflex_mp=intolerant -N1023 -M878"
-            ldflags = ""
             arch_extra = "bld::tool::fc_modsearch -J"
 
         if spec.satisfies("+omp~omp_offload"):
@@ -206,6 +217,9 @@ class Nemo(Package):
             offload_flags = self.spec.variants["omp_flags"].value
             fflags += f" {offload_flags}"
             ldflags += f" {offload_flags}"
+            if spec.satisfies("+reproducible%nvhpc"):
+                fflags += " -gpu=math_uniform"
+                ldflags += " -gpu=math_uniform"
 
         arch = textwrap.dedent(
             f"""

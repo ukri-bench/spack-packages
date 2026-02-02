@@ -167,16 +167,22 @@ class Nemo(Package):
         if self.spec.satisfies("+xios"):
             env.set("XIOS_PATH", self.spec["xios"].prefix)
         if self.spec.satisfies("+omp"):
-            utilspath = join_path(
+            scripts_dir = join_path(
                 self.spec["py-psyclone"].prefix.share,
                 "psyclone",
                 "examples",
                 "nemo",
                 "scripts",
             )
-            env.prepend_path("PYTHONPATH", utilspath)
-            if self.spec.satisfies("+omp_offload+reproducible"):
-                env.set("REPRODUCIBLE", "True") # only supported on Nvidia GPUs
+            env.prepend_path("PYTHONPATH", scripts_dir)
+            env.set("PSYCLONE_COMPILER", self.spec["mpi"].mpifc)
+            if self.spec.satisfies("~omp_offload"):
+                trans = join_path(scripts_dir, "omp_cpu_trans.py")
+            elif self.spec.satisfies("+omp_offload"):
+                trans = join_path(scripts_dir, "omp_gpu_trans.py")
+                if self.spec.satisfies("+reproducible"):
+                    env.set("REPRODUCIBLE", "True") # only supported on Nvidia GPUs
+            env.set("PSYCLONE_OPTS", f"-l output -s {trans}")
 
     def configure(self, spec, prefix):
         ar = join_path(spec["binutils"].prefix.bin, "ar")
@@ -195,6 +201,7 @@ class Nemo(Package):
             xiosdir = str(spec["xios"].prefix)
         if spec.satisfies("+omp"):
             psydir = str(spec["py-psyclone"].prefix)
+            fcompiler = join_path(spec["py-psyclone"].prefix.bin, "psyclonefc")
 
         if spec.satisfies("%gcc"):
             fflags = "-fdefault-real-8 -O2 -funroll-all-loops -fcray-pointer -ffree-line-length-none"
@@ -299,23 +306,6 @@ class Nemo(Package):
         params.append(f"{make_jobs}")
         params.append("-m")
         params.append(f"fort")
-
-        if self.spec.satisfies("+omp"):
-            trans = join_path(
-                self.spec["py-psyclone"].prefix.share,
-                "psyclone",
-                "examples",
-                "nemo",
-                "scripts",
-            )
-
-            if self.spec.satisfies("~omp_offload"):
-                trans = join_path(trans, "omp_cpu_trans.py")
-            elif self.spec.satisfies("+omp_offload"):
-                trans = join_path(trans, "omp_gpu_trans.py")
-
-            params.append("-p")
-            params.append(trans)
 
         if self.config_path.parent.name == "cfgs":
             params.append("-r")

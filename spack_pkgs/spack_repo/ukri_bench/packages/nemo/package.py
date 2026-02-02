@@ -52,12 +52,25 @@ class Nemo(Package):
     )
     variant("xios", default=False, description="Enable XIOS IO server support")
     variant(
-        "openmp",
+        "omp",
         default=False,
         description="Apply OpenMP transforms to NEMO through PSyclone",
     )
-    # TODO: Add GPU support
-    # variant('openmp-offload', default=False, description='Apply OpenMP GPU transforms to NEMO through PSyclone')
+    variant("omp_offload", default=False, when="+omp", description="Enable OpenMP offloading to the GPU")
+    variant(
+        "omp_flags",
+        values=str,
+        default="none",
+        when="+omp",
+        description="If omp_offload is enabled, this *overrides* the default omp flags",
+    )
+    # TODO: Add non-nvhpc support for reproducibility
+    variant(
+        "reproducible",
+        default=False,
+        description="Disables optimisations to generate reproducible results on CPU and GPU",
+        when="%nvhpc"
+    )
     variant(
         "config",
         default="ORCA2_ICE_PISCES",
@@ -80,6 +93,11 @@ class Nemo(Package):
         "config=GENERIC",
         when="generic_config=none",
         msg="generic_config should be set when using config=GENERIC",
+    )
+    conflicts(
+        "omp_flags=none",
+        when="+omp_offload",
+        msg="OpenMP requires offload flags to be specfied by omp_flags when omp_offload is enabled",
     )
 
     for key, value in nmconfigs.items():
@@ -110,11 +128,7 @@ class Nemo(Package):
     depends_on("netcdf-c@4.9.0: +mpi +shared", type=("build", "link"))
     depends_on("netcdf-fortran@4.6.1: +shared", type="build")
     depends_on("py-f90nml", type="run")
-    depends_on("py-psyclone", type="build", when="+openmp")
-
-    # --- Patches ---
-    patch("makenemo.patch")
-    patch("sct_psyclone.patch")
+    depends_on("py-psyclone", type="build", when="+omp")
 
     # --- Variables ---
     config_name = "BLDCFG"
@@ -148,15 +162,23 @@ class Nemo(Package):
     def setup_build_environment(self, env):
         if self.spec.satisfies("+xios"):
             env.set("XIOS_PATH", self.spec["xios"].prefix)
-        if self.spec.satisfies("+openmp"):
-            utilspath = join_path(
+        if self.spec.satisfies("+omp"):
+            scripts_dir = join_path(
                 self.spec["py-psyclone"].prefix.share,
                 "psyclone",
                 "examples",
                 "nemo",
                 "scripts",
             )
-            env.prepend_path("PYTHONPATH", utilspath)
+            env.prepend_path("PYTHONPATH", scripts_dir)
+            env.set("PSYCLONE_COMPILER", self.spec["mpi"].mpifc)
+            if self.spec.satisfies("~omp_offload"):
+                trans = join_path(scripts_dir, "omp_cpu_trans.py")
+            elif self.spec.satisfies("+omp_offload"):
+                trans = join_path(scripts_dir, "omp_gpu_trans.py")
+                if self.spec.satisfies("+reproducible"):
+                    env.set("REPRODUCIBLE", "True") # only supported on Nvidia GPUs
+            env.set("PSYCLONE_OPTS", f"-l output -s {trans}")
 
     def configure(self, spec, prefix):
         ar = join_path(spec["binutils"].prefix.bin, "ar")
@@ -168,40 +190,39 @@ class Nemo(Package):
         xiosdir = ""
         psydir = ""
         arch_extra = ""
+        fflags = ""
+        ldflags = ""
 
         if spec.satisfies("+xios"):
             xiosdir = str(spec["xios"].prefix)
-
-        if spec.satisfies("+openmp"):
+        if spec.satisfies("+omp"):
             psydir = str(spec["py-psyclone"].prefix)
-
-        # TODO: Add -march, check how spack does it
+            fcompiler = join_path(spec["py-psyclone"].prefix.bin, "psyclonefc")
 
         if spec.satisfies("%gcc"):
             fflags = "-fdefault-real-8 -O2 -funroll-all-loops -fcray-pointer -ffree-line-length-none"
-            ldflags = "-fdefault-real-8"
-            if spec.satisfies("+openmp"):
-                fflags += " -fopenmp"
-                ldflags += " -fopenmp"
         elif spec.satisfies("%nvhpc"):
-            fflags = "-i4 -Mr8 -Mnovect -Mflushz -Minline -Mnofma -O2 -gopt -traceback"
-            ldflags = "-i4 -Mr8 -Mnofma"
-            if spec.satisfies("+openmp"):
-                fflags += " -mp"
-                ldflags += " -mp"
+            fflags = "-i4 -Mr8 -Minline"
+            if spec.satisfies("+reproducible"):
+                fflags += " -O2 -Mnovect -Mflushz -Mnofma"
+            else:
+                fflags += " -O3"
         elif spec.satisfies("%oneapi"):
             fflags = "-i4 -r8 -O2 -fp-model strict -xHost -fno-alias"
-            ldflags = "-i4 -r8"
-            if spec.satisfies("+openmp"):
-                fflags += " -fiopenmp"
-                ldflags += " -fiopenmp"
         elif spec.satisfies("%cce"):
             fflags = "-em -s integer32 -s real64 -O2 -hvector_classic -hflex_mp=intolerant -N1023 -M878"
-            ldflags = ""
             arch_extra = "bld::tool::fc_modsearch -J"
-            if spec.satisfies("+openmp"):
-                fflags += " -h omp"
-                ldflags += " -h omp"
+
+        if spec.satisfies("+omp~omp_offload"):
+            fflags += f" {self.compiler.openmp_flag}"
+            ldflags += f" {self.compiler.openmp_flag}"
+        elif spec.satisfies("+omp+omp_offload"):
+            offload_flags = self.spec.variants["omp_flags"].value
+            fflags += f" {offload_flags}"
+            ldflags += f" {offload_flags}"
+            if spec.satisfies("+reproducible%nvhpc"):
+                fflags += " -gpu=math_uniform"
+                ldflags += " -gpu=math_uniform"
 
         arch = textwrap.dedent(
             f"""
@@ -281,18 +302,6 @@ class Nemo(Package):
         params.append(f"{make_jobs}")
         params.append("-m")
         params.append(f"fort")
-
-        if self.spec.satisfies("+openmp"):
-            trans = join_path(
-                self.spec["py-psyclone"].prefix.share,
-                "psyclone",
-                "examples",
-                "nemo",
-                "scripts",
-                "omp_cpu_trans.py",
-            )
-            params.append("-p")
-            params.append(trans)
 
         if self.config_path.parent.name == "cfgs":
             params.append("-r")

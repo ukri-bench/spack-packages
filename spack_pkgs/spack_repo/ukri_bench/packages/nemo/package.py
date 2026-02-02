@@ -130,10 +130,6 @@ class Nemo(Package):
     depends_on("py-f90nml", type="run")
     depends_on("py-psyclone", type="build", when="+omp")
 
-    # --- Patches ---
-    patch("makenemo.patch")
-    patch("sct_psyclone.patch")
-
     # --- Variables ---
     config_name = "BLDCFG"
     source_cfg = None

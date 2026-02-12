@@ -25,6 +25,7 @@ class BenchDolfinx(CMakePackage, CudaPackage, ROCmPackage):
     depends_on("py-fenics-ffcx", type="build")
 
     depends_on("boost +program_options+json")  # See https://github.com/boostorg/math/issues/1285
+    depends_on("scotch +int64")
     depends_on("mpi")
 
     depends_on("cuda", when="+cuda")

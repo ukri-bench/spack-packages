@@ -10,27 +10,32 @@ from spack.package import *
 
 
 class BenchDolfinx(CMakePackage, CudaPackage, ROCmPackage):
-    "A benchmark using DOLFINx."
+    """A benchmark using DOLFINx."""
 
-    homepage = "https://github.com/ukri-bench/ukri-bench"
+    homepage = "https://github.com/ukri-bench/benchmark-dolfinx"
     git = "https://github.com/ukri-bench/benchmark-dolfinx.git"
 
-    version("main", tag="main", no_cache=True)
+    version("main", branch="main", no_cache=True)
 
     depends_on("c", type="build")
     depends_on("cxx", type="build")
+    depends_on("cuda-lang", type="build", when="+cuda")
+    depends_on("hip-lang", type="build", when="+rocm")
 
     depends_on("fenics-dolfinx@0.10 partitioners:=scotch")
-    depends_on("fenics-basix")
-    depends_on("py-fenics-ffcx", type="build")
+    depends_on("fenics-basix@0.10")
+    # FFCx-generated code must match the UFCx interface of DOLFINx
+    depends_on("py-fenics-ffcx@0.10", type="build")
 
-    depends_on("boost +program_options+json")  # See https://github.com/boostorg/math/issues/1285
+    depends_on("boost +program_options+json")
+    # Not used directly; selects 64-bit Scotch for DOLFINx graph partitioning
     depends_on("scotch +int64")
     depends_on("mpi")
 
-    depends_on("cuda", when="+cuda")
-    depends_on("hip", when="+rocm")
     conflicts("+cuda", when="+rocm", msg="Cannot build for both ROCm and CUDA.")
+    # The benchmark CMake treats an unset GPU arch as a CPU-only build
+    conflicts("cuda_arch=none", when="+cuda", msg="A CUDA architecture must be specified.")
+    conflicts("amdgpu_target=none", when="+rocm", msg="An AMD GPU target must be specified.")
 
     with when("+rocm"):
         depends_on("rocm-core")
@@ -39,11 +44,10 @@ class BenchDolfinx(CMakePackage, CudaPackage, ROCmPackage):
     root_cmakelists_dir = "src"
 
     def cmake_args(self):
+        spec = self.spec
         args = []
-        if "+rocm" in self.spec:
-            args.append(
-                self.define("HIP_ARCH", self.spec.variants["amdgpu_target"].value)
-            )
-        if "+cuda" in self.spec:
-            args.append(self.define("CUDA_ARCH", self.spec.variants["cuda_arch"].value))
+        if spec.satisfies("+rocm"):
+            args.append(self.define("HIP_ARCH", spec.variants["amdgpu_target"].value))
+        if spec.satisfies("+cuda"):
+            args.append(self.define("CUDA_ARCH", spec.variants["cuda_arch"].value))
         return args

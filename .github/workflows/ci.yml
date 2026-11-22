@@ -60,4 +60,5 @@ jobs:
           spack spec bench-dolfinx +rocm amdgpu_target=gfx90a
           spack spec nemo
           spack spec nemo config=BENCH +ice +pisces
-          spack spec nemo +omp
+          spack spec nemo +openmp
+          spack spec nemo +openmp +openmp_offload openmp_flags=-fopenmp

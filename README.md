@@ -15,9 +15,16 @@ UKRI Living Benchmarks.
   the two, with an architecture).
 - `nemo`: the [NEMO](https://www.nemo-ocean.eu/) ocean model (5.0.2 by
   default; also 5.0.1 and 5.0), with optional PSyclone OpenMP CPU/GPU
-  transformations (`+omp`, `+omp_offload`). The source configuration is
-  selected with `config=`. Supported Fortran compilers: gcc, nvhpc, oneapi and
-  cce.
+  transformations. The source configuration is selected with `config=`.
+  Supported Fortran compilers: gcc, nvhpc, oneapi and cce. OpenMP variants:
+  - `+openmp`: apply PSyclone's OpenMP CPU transformations;
+  - `+openmp_offload` (with `+openmp`): apply the GPU offload transformations
+    instead. The offload compiler/linker flags must be given with
+    `openmp_flags=` (for example `openmp_flags="-mp=gpu -gpu=cc90"` with nvhpc);
+  - `+reproducible` (nvhpc only): disable optimisations that change results
+    between CPU and GPU runs.
+
+  These variants were previously named `omp`, `omp_offload` and `omp_flags`.
 
 `spack info <package>` lists all variants.
 
@@ -44,6 +51,8 @@ Then, for example:
 spack install bench-dolfinx
 spack install bench-dolfinx +cuda cuda_arch=90
 spack install nemo config=BENCH
+spack install nemo +openmp %fortran=gcc
+spack install nemo +openmp +openmp_offload openmp_flags="-mp=gpu -gpu=cc90" %fortran=nvhpc
 ```
 
 ### Running

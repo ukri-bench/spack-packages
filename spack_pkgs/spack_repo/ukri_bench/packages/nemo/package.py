@@ -46,19 +46,19 @@ class Nemo(Package):
     variant("ice", default=False, description="Enable the SI3 sea-ice model component")
     variant("pisces", default=False, description="Enable the PISCES biogeochemical model")
     variant("xios", default=False, description="Enable XIOS IO server support")
-    variant("omp", default=False, description="Apply OpenMP transforms to NEMO through PSyclone")
+    variant("openmp", default=False, description="Apply PSyclone OpenMP transformations to NEMO")
     variant(
-        "omp_offload",
+        "openmp_offload",
         default=False,
-        when="+omp",
+        when="+openmp",
         description="Enable OpenMP offloading to the GPU",
     )
     variant(
-        "omp_flags",
+        "openmp_flags",
         values=str,
         default="none",
-        when="+omp_offload",
-        description="Compiler and linker flags for OpenMP offloading (required with omp_offload)",
+        when="+openmp_offload",
+        description="OpenMP offload compiler and linker flags (required with openmp_offload)",
     )
     # TODO: Add non-nvhpc support for reproducibility
     variant(
@@ -90,9 +90,9 @@ class Nemo(Package):
         msg="generic_config must be set when using config=GENERIC",
     )
     conflicts(
-        "omp_flags=none",
-        when="+omp_offload",
-        msg="OpenMP offload flags must be specified by omp_flags when omp_offload is enabled",
+        "openmp_flags=none",
+        when="+openmp_offload",
+        msg="openmp_flags must be set when openmp_offload is enabled",
     )
 
     for _cfg, _features in nmconfigs.items():
@@ -136,7 +136,7 @@ class Nemo(Package):
     depends_on("py-f90nml", type="run")
     # psyclonefc was introduced in PSyclone 3.2. Builtin repos without a 3.2+ release
     # (e.g. releases/v2026.06, used by Spack v1.2) fall back to @master.
-    depends_on("py-psyclone@3.2:", type="build", when="+omp")
+    depends_on("py-psyclone@3.2:", type="build", when="+openmp")
 
     @property
     def source_cfg(self):
@@ -194,13 +194,13 @@ class Nemo(Package):
         spec = self.spec
         if spec.satisfies("+xios"):
             env.set("XIOS_PATH", spec["xios"].prefix)
-        if spec.satisfies("+omp"):
+        if spec.satisfies("+openmp"):
             scripts_dir = join_path(
                 spec["py-psyclone"].prefix.share, "psyclone", "examples", "nemo", "scripts"
             )
             env.prepend_path("PYTHONPATH", scripts_dir)
             env.set("PSYCLONE_COMPILER", spec["mpi"].mpifc)
-            if spec.satisfies("+omp_offload"):
+            if spec.satisfies("+openmp_offload"):
                 trans = join_path(scripts_dir, "omp_gpu_trans.py")
                 if spec.satisfies("+reproducible"):
                     env.set("REPRODUCIBLE", "True")  # only supported on Nvidia GPUs
@@ -218,7 +218,7 @@ class Nemo(Package):
         arch_extra = ""
         ldflags = ""
 
-        if spec.satisfies("+omp"):
+        if spec.satisfies("+openmp"):
             psydir = spec["py-psyclone"].prefix
             fcompiler = join_path(psydir.bin, "psyclonefc")
 
@@ -240,12 +240,12 @@ class Nemo(Package):
             )
             arch_extra = "bld::tool::fc_modsearch -J"
 
-        if spec.satisfies("+omp~omp_offload"):
+        if spec.satisfies("+openmp~openmp_offload"):
             openmp_flag = spec["fortran"].package.openmp_flag
             fflags += f" {openmp_flag}"
             ldflags += f" {openmp_flag}"
-        elif spec.satisfies("+omp+omp_offload"):
-            offload_flags = spec.variants["omp_flags"].value
+        elif spec.satisfies("+openmp+openmp_offload"):
+            offload_flags = spec.variants["openmp_flags"].value
             fflags += f" {offload_flags}"
             ldflags += f" {offload_flags}"
             if spec.satisfies("+reproducible"):

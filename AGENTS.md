@@ -65,7 +65,7 @@ With Spack available:
 spack repo add spack_pkgs/spack_repo/ukri_bench
 spack audit packages bench-dolfinx nemo
 spack spec bench-dolfinx
-spack spec nemo +omp
+spack spec nemo +openmp
 ```
 
 There is no local test suite; CI is the integration test.

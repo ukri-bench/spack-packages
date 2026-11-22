@@ -9,8 +9,9 @@ UKRI Living Benchmarks.
 
 ## Packages
 
-- `bench-dolfinx`: the [DOLFINx benchmark](https://github.com/ukri-bench/benchmark-dolfinx)
-  (version `main`), built against DOLFINx 0.11. CPU by default; `+cuda
+- `bench-dolfinx`: the [DOLFINx benchmark](https://github.com/ukri-bench/benchmark-dolfinx).
+  Versions: `0.10.0` (the default, built against DOLFINx 0.10) and `main`
+  (built against DOLFINx 0.11). CPU by default; `+cuda
   cuda_arch=<arch>` or `+rocm amdgpu_target=<target>` for GPU builds (one of
   the two, with an architecture).
 - `nemo`: the [NEMO](https://www.nemo-ocean.eu/) ocean model (5.0.2 by
@@ -32,7 +33,7 @@ UKRI Living Benchmarks.
 
 Requires Spack v1.0 or later (Package API v2.0).
 
-`bench-dolfinx` needs DOLFINx 0.11, which is in the builtin packages
+`bench-dolfinx@main` needs DOLFINx 0.11, which is in the builtin packages
 ([spack-packages](https://github.com/spack/spack-packages)) from
 `releases/v2026.10`. Spack v1.2.2 uses `releases/v2026.06` by default, which
 has only DOLFINx 0.10. To switch:

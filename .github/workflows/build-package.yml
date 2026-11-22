@@ -1,0 +1,148 @@
+# Reusable workflow: build one package from this repository.
+#
+# Dependencies are taken from, and pushed to, a Spack OCI build cache on the
+# GitHub Container Registry (see .github/spack/ci-env.yaml). Each dependency
+# built from source is pushed as soon as it is installed (autopush), so work is
+# kept even if the job later fails, times out or is cancelled. The package
+# itself is always built from source and is never pushed.
+
+name: Build package
+
+on:
+  workflow_call:
+    inputs:
+      package:
+        description: Package name
+        required: true
+        type: string
+      spec:
+        description: "Spec to build (default: the package name)"
+        required: false
+        type: string
+        default: ""
+      smoke-test:
+        description: >-
+          Shell commands run after the build. VIEW (the environment view) and
+          PREFIX (the package install prefix) are set.
+        required: false
+        type: string
+        default: ""
+
+env:
+  # Latest Spack release. Bump deliberately (and in ci.yml).
+  SPACK_VERSION: v1.2.2
+  # spack-packages (builtin repo) commit. Bumping re-solves the graph and can
+  # invalidate cached binaries. Bump deliberately (and in ci.yml):
+  #   git ls-remote https://github.com/spack/spack-packages.git refs/heads/develop
+  SPACK_PACKAGES_COMMIT: 731577eee0004659abb29a12e42d4c52a48e7285 # develop, 2026-11-22
+  # Credentials for the OCI build cache
+  GITHUB_USER: ${{ github.actor }}
+  GITHUB_TOKEN: ${{ github.token }}
+  OMPI_ALLOW_RUN_AS_ROOT: 1
+  OMPI_ALLOW_RUN_AS_ROOT_CONFIRM: 1
+
+jobs:
+  build:
+    name: ${{ inputs.spec || inputs.package }}
+    runs-on: ubuntu-26.04
+    # Fixed base image, so cached binaries match the system they run on
+    container: ubuntu:26.04
+    timeout-minutes: 360
+    permissions:
+      contents: read
+      packages: write
+    env:
+      # Pull requests from forks get a read-only GITHUB_TOKEN; they still read
+      # from the cache but do not push to it
+      CAN_PUSH: >-
+        ${{ github.event_name != 'pull_request'
+        || github.event.pull_request.head.repo.full_name == github.repository }}
+    steps:
+      - name: Install Spack requirements
+        run: |
+          apt-get -y update
+          apt-get install -y --no-install-recommends file bzip2 ca-certificates g++ gcc gfortran git gzip \
+            lsb-release patch python3 tar unzip xz-utils zstd
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Spack
+        uses: spack/setup-spack@16b756799ede8b28951287f89bcd3fdb32ec1ca3 # v3.0.0
+        with:
+          spack_ref: ${{ env.SPACK_VERSION }}
+          packages_ref: ${{ env.SPACK_PACKAGES_COMMIT }}
+
+      - name: Add package repository
+        run: |
+          spack repo add "${GITHUB_WORKSPACE}/spack_pkgs/spack_repo/ukri_bench"
+          spack repo list
+          {
+            echo "### ${{ inputs.spec || inputs.package }}"
+            echo "- Spack: \`${SPACK_VERSION}\`"
+            echo "- spack-packages: \`${SPACK_PACKAGES_COMMIT}\`"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+      - name: Concretize
+        id: concretize
+        env:
+          SPEC: ${{ inputs.spec || inputs.package }}
+        run: |
+          spack env create ci .github/spack/ci-env.yaml
+          spack -e ci add "${SPEC}"
+          spack -e ci concretize -j "$(nproc)"
+
+      # Autopush uploads each package built from source right after it is
+      # installed; packages installed from the cache are not pushed again
+      - name: Enable build cache autopush
+        if: env.CAN_PUSH == 'true'
+        run: spack -e ci mirror set --autopush ukri-bench-buildcache
+
+      # No --fail-fast: if one dependency fails, independent ones are still
+      # built (and pushed)
+      - name: Install dependencies
+        run: |
+          spack -e ci install -j "$(nproc)" --only dependencies --use-buildcache auto
+          # --only dependencies skips build-only dependencies of the package itself.
+          # Install them here too, so they are built (and pushed) in this step and
+          # the package build below can take every dependency from the cache.
+          build_deps=$(spack -e ci python -c 'import spack.environment as ev; print(" ".join("/" + d.dag_hash() for r in ev.active_environment().concrete_roots() for d in r.dependencies(deptype="build")))')
+          if [ -n "${build_deps}" ]; then
+            # shellcheck disable=SC2086
+            spack -e ci install -j "$(nproc)" --no-add --use-buildcache auto ${build_deps}
+          fi
+
+      - name: Build ${{ inputs.package }}
+        run: |
+          # The package itself is not cached
+          spack -e ci mirror set --no-autopush ukri-bench-buildcache
+          spack -e ci install -j "$(nproc)" --use-buildcache package:never,dependencies:only --fail-fast
+          spack -e ci find -lv
+
+      - name: Smoke test
+        if: inputs.smoke-test != ''
+        env:
+          SMOKE_TEST: ${{ inputs.smoke-test }}
+          PACKAGE: ${{ inputs.package }}
+        run: |
+          export VIEW=/opt/view
+          PREFIX=$(spack -e ci location -i "${PACKAGE}")
+          export PREFIX
+          bash -euo pipefail -c "${SMOKE_TEST}"
+
+      # Runs even after a failure or cancellation, so dependencies pushed so far
+      # are listed in the index
+      - name: Update build cache index
+        if: always() && env.CAN_PUSH == 'true' && steps.concretize.outcome == 'success'
+        run: spack -e ci buildcache update-index ukri-bench-buildcache
+
+      - name: Upload build logs
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: spack-build-logs-${{ inputs.package }}
+          path: |
+            /opt/spack-stage/**/spack-build-out.txt
+            /opt/spack-stage/**/spack-build-env*.txt
+            /opt/spack-stage/**/spack-configure-args.txt
+          if-no-files-found: ignore

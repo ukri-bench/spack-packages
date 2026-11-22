@@ -1,0 +1,30 @@
+# Spack environment template for the package build workflows.
+# Specs are added by .github/workflows/build-package.yml.
+spack:
+  view: /opt/view
+  config:
+    install_tree:
+      root: /opt/spack
+      # Padding lets cached binaries be relocated to longer install paths
+      padded_length: 128
+    build_stage:
+      - /opt/spack-stage
+
+  concretizer:
+    unify: true
+    reuse: false
+
+  packages:
+    all:
+      # Generic target so binaries are reusable across runner CPU models
+      require:
+        - target=x86_64_v3
+
+  mirrors:
+    ukri-bench-buildcache:
+      url: oci://ghcr.io/ukri-bench/spack-packages-buildcache
+      binary: true
+      signed: false
+      access_pair:
+        id_variable: GITHUB_USER
+        secret_variable: GITHUB_TOKEN

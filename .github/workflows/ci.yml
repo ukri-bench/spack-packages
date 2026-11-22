@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ["**.md"]
+  pull_request:
+    paths-ignore: ["**.md"]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install ruff
+        run: pip install ruff
+      - name: Lint
+        run: ruff check .
+      - name: Check formatting
+        run: ruff format --check .
+
+  spack:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Builtin package repo: the snapshot used by the Spack release by default,
+        # and the commit the build workflows use (keep in sync with build-package.yml)
+        packages_ref:
+          - releases/v2026.06
+          - 731577eee0004659abb29a12e42d4c52a48e7285
+    name: spack (spack-packages ${{ matrix.packages_ref }})
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Set up Spack
+        uses: spack/setup-spack@16b756799ede8b28951287f89bcd3fdb32ec1ca3 # v3.0.0
+        with:
+          # Keep in sync with build-package.yml
+          spack_ref: v1.2.2
+          packages_ref: ${{ matrix.packages_ref }}
+          buildcache: false
+      - name: Audit and concretize
+        run: |
+          spack repo add "${GITHUB_WORKSPACE}/spack_pkgs/spack_repo/ukri_bench"
+          spack audit packages bench-dolfinx nemo
+          set -x
+          spack spec bench-dolfinx
+          spack spec bench-dolfinx +cuda cuda_arch=90
+          spack spec bench-dolfinx +rocm amdgpu_target=gfx90a
+          spack spec nemo
+          spack spec nemo config=BENCH +ice +pisces
+          spack spec nemo +openmp
+          spack spec nemo +openmp +openmp_offload openmp_flags=-fopenmp

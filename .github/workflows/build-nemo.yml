@@ -1,0 +1,38 @@
+name: Build nemo
+
+on:
+  push:
+    branches: [main]
+    paths: &paths
+      - spack_pkgs/spack_repo/ukri_bench/packages/nemo/**
+      - spack_pkgs/spack_repo/ukri_bench/repo.yaml
+      - .github/workflows/build-package.yml
+      - .github/spack/**
+      - .github/workflows/build-nemo.yml
+  pull_request:
+    paths: *paths
+  schedule:
+    # Weekly, to catch upstream breakage (e.g. source downloads)
+    - cron: "0 3 * * 1"
+  workflow_dispatch:
+
+# Cancel superseded pull request runs; pushes to main finish so they populate the cache
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  build:
+    permissions:
+      contents: read
+      packages: write # push to the OCI build cache
+    uses: ./.github/workflows/build-package.yml
+    with:
+      package: nemo
+      smoke-test: |
+        # makenemo links EXP00/nemo -> BLD/bin/nemo.exe
+        nemo="${PREFIX}/EXP00/nemo"
+        if [[ ! -x "${nemo}" ]]; then echo "Missing executable ${nemo}" >&2; exit 1; fi
+        # `! cmd` is ignored by `set -e`, so test explicitly
+        if ldd "${nemo}" | grep "not found"; then exit 1; fi
+        "${PREFIX}/bin/nemo-wrapper" --help

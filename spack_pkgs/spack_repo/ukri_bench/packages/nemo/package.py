@@ -1,6 +1,6 @@
 # Copyright 2025 Aditya Sadawarte
 #
-# SPDX-License-Identifier: (Apache-2.0 OR MIT)
+# SPDX-License-Identifier: MIT
 
 import os
 import sys
@@ -114,7 +114,6 @@ class Nemo(Package):
     depends_on("fortran", type="build")
 
     # --- Dependencies ---
-    depends_on("binutils", type="build")
     depends_on("gmake", type="build")
     # NEMO segfaults without MPI even if we aren't using it
     depends_on("mpi")
@@ -123,7 +122,8 @@ class Nemo(Package):
     depends_on("netcdf-c@4.9.0: +mpi +shared")
     depends_on("netcdf-fortran@4.6.1: +shared")
     depends_on("py-f90nml", type="run")
-    depends_on("py-psyclone", type="build", when="+omp")
+    # psyclonefc was introduced in PSyclone 3.2
+    depends_on("py-psyclone@3.2:", type="build", when="+omp")
 
     @property
     def source_cfg(self):
@@ -199,7 +199,7 @@ class Nemo(Package):
             env.set("PSYCLONE_OPTS", f"-l output -s {trans}")
 
     def configure(self, spec, prefix):
-        ar = join_path(spec["binutils"].prefix.bin, "ar")
+        ar = which("ar", required=True).path
         gmake = join_path(spec["gmake"].prefix.bin, "gmake")
         fcompiler = spec["mpi"].mpifc
         h5dir = spec["hdf5"].prefix
@@ -271,6 +271,7 @@ class Nemo(Package):
             ]
         )
 
+        # FCM preprocesses with the system cpp (traditional mode), which is not a Spack dependency
         arch = textwrap.dedent(
             f"""\
             %NCDFF_HOME          {nfdir}

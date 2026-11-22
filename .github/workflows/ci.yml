@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install ruff
+        run: pip install ruff
+      - name: Lint
+        run: ruff check .
+      - name: Check formatting
+        run: ruff format --check .
+
+  spack:
+    runs-on: ubuntu-latest
+    env:
+      SPACK_VERSION: v1.2.2
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Spack
+        run: git clone --depth=1 --branch "${SPACK_VERSION}" https://github.com/spack/spack.git "${RUNNER_TEMP}/spack"
+      - name: Add package repository
+        run: |
+          . "${RUNNER_TEMP}/spack/share/spack/setup-env.sh"
+          spack repo add "${GITHUB_WORKSPACE}/spack_pkgs/spack_repo/ukri_bench"
+          spack repo list
+      - name: Audit packages
+        run: |
+          . "${RUNNER_TEMP}/spack/share/spack/setup-env.sh"
+          spack audit packages bench-dolfinx nemo
+      - name: Concretize
+        run: |
+          . "${RUNNER_TEMP}/spack/share/spack/setup-env.sh"
+          set -x
+          spack spec bench-dolfinx
+          spack spec bench-dolfinx +cuda cuda_arch=90
+          spack spec bench-dolfinx +rocm amdgpu_target=gfx90a
+          spack spec nemo
+          spack spec nemo config=BENCH +ice +pisces
+          spack spec nemo +omp

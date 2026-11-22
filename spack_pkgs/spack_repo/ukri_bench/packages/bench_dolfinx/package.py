@@ -1,6 +1,6 @@
 # Copyright 2025 Chris Richardson and Garth N. Wells.
 #
-# SPDX-License-Identifier: (Apache-2.0 OR MIT)
+# SPDX-License-Identifier: MIT
 
 from spack_repo.builtin.build_systems.cmake import CMakePackage
 from spack_repo.builtin.build_systems.cuda import CudaPackage
@@ -19,8 +19,6 @@ class BenchDolfinx(CMakePackage, CudaPackage, ROCmPackage):
 
     depends_on("c", type="build")
     depends_on("cxx", type="build")
-    depends_on("cuda-lang", type="build", when="+cuda")
-    depends_on("hip-lang", type="build", when="+rocm")
 
     depends_on("fenics-dolfinx@0.10 partitioners:=scotch")
     depends_on("fenics-basix@0.10")

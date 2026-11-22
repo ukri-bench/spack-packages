@@ -1,0 +1,6 @@
+line-length = 99
+
+[lint]
+select = ["E", "F", "W"]
+# Packages use Spack's star import of the package API
+ignore = ["F403", "F405"]

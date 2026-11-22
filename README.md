@@ -9,10 +9,15 @@ UKRI Living Benchmarks.
 
 ## Packages
 
-- `bench-dolfinx`: the [DOLFINx benchmark](https://github.com/ukri-bench/benchmark-dolfinx)
-  (version `main`), built against DOLFINx 0.10. CPU by default; `+cuda
+- `bench-dolfinx`: the [DOLFINx benchmark](https://github.com/ukri-bench/benchmark-dolfinx).
+  Versions: `0.10.0` (the default, built against DOLFINx 0.10) and `main`
+  (built against DOLFINx 0.11). CPU by default; `+cuda
   cuda_arch=<arch>` or `+rocm amdgpu_target=<target>` for GPU builds (one of
   the two, with an architecture).
+- `fenics-dolfinx`: the builtin package with one added patch for DOLFINx
+  0.11, without which nvcc 13 aborts with an internal error on the header
+  `dolfinx/mesh/EntityMap.h`. It overrides the builtin package while this
+  repository is added.
 - `nemo`: the [NEMO](https://www.nemo-ocean.eu/) ocean model (5.0.2 by
   default; also 5.0.1 and 5.0), with optional PSyclone OpenMP CPU/GPU
   transformations. The source configuration is selected with `config=`.
@@ -31,6 +36,15 @@ UKRI Living Benchmarks.
 ## Usage
 
 Requires Spack v1.0 or later (Package API v2.0).
+
+`bench-dolfinx@main` needs DOLFINx 0.11, which is in the builtin packages
+([spack-packages](https://github.com/spack/spack-packages)) from
+`releases/v2026.10`. Spack v1.2.2 uses `releases/v2026.06` by default, which
+has only DOLFINx 0.10. To switch:
+
+```console
+spack repo update builtin --branch releases/v2026.10
+```
 
 Add the repository directly from GitHub:
 
@@ -58,11 +72,11 @@ spack install nemo +openmp +openmp_offload openmp_flags="-mp=gpu -gpu=cc90" %for
 ### Running
 
 - `bench-dolfinx` installs the executable `bench_dolfinx` (`bench_dolfinx -h`
-  lists options). CPU builds support only `--qmode=0`; the default
-  `--qmode=1` is GPU-only. For example:
+  lists options). `--qmode` defaults to 0 for CPU builds, which support
+  only `--qmode=0`, and to 1 for GPU builds. For example:
 
   ```console
-  mpiexec -n 2 bench_dolfinx --ndofs=10000 --degree=3 --nreps=10 --qmode=0
+  mpiexec -n 2 bench_dolfinx --ndofs=10000 --degree=3 --nreps=10
   ```
 
 - `nemo` installs the build configuration under its prefix, with the
@@ -80,15 +94,15 @@ Python style is checked with [ruff](https://docs.astral.sh/ruff/)
 (`ruff check .` and `ruff format --check .`). GitHub Actions workflows:
 
 - [`ci.yml`](.github/workflows/ci.yml): ruff, then `spack audit` and
-  `spack spec` for several variants of each package, against both the builtin
-  package snapshot of the pinned Spack release and the pinned spack-packages
-  commit.
+  `spack spec` for several variants of each package, against the pinned
+  spack-packages commit.
 - [`build-bench-dolfinx.yml`](.github/workflows/build-bench-dolfinx.yml) and
   [`build-nemo.yml`](.github/workflows/build-nemo.yml): build each package
   on Ubuntu and AlmaLinux (target `x86_64_v3`) with a pinned Spack release and
   [spack-packages](https://github.com/spack/spack-packages) commit, then
-  check and smoke-test it. The OS releases and pins are set in
-  [`build-package.yml`](.github/workflows/build-package.yml). bench-dolfinx
+  check and smoke-test it. The OS releases are set in
+  [`build-package.yml`](.github/workflows/build-package.yml) and the pins in
+  [`.github/spack/versions.env`](.github/spack/versions.env). bench-dolfinx
   is also built for CUDA and ROCm; the runners have no GPU, so those builds
   are compile-only. The workflows run on changes to the package, weekly, and
   on demand.

@@ -1,0 +1,31 @@
+diff --git a/cpp/dolfinx/mesh/EntityMap.h b/cpp/dolfinx/mesh/EntityMap.h
+--- a/cpp/dolfinx/mesh/EntityMap.h
++++ b/cpp/dolfinx/mesh/EntityMap.h
+@@ -100,7 +100,8 @@ public:
+   /// `this->sub_topology()`.
+   /// @return A list of mapped entity indices. Entities that do not
+   /// exist in the target topology are marked as -1.
+-  std::vector<std::int32_t> sub_topology_to_topology(CellRange auto&& entities,
++  template <CellRange R>
++  std::vector<std::int32_t> sub_topology_to_topology(R&& entities,
+                                                      bool inverse) const
+   {
+     if (!inverse)
+@@ -110,7 +111,7 @@ public:
+       // for each index in `entities`, we get the corresponding index in
+       // `_topology` using `_sub_topology_to_topology`
+       auto mapped
+-          = std::forward<decltype(entities)>(entities)
++          = std::forward<R>(entities)
+             | std::views::transform([this](std::int32_t i)
+                                     { return _sub_topology_to_topology[i]; });
+       return std::vector<std::int32_t>(mapped.begin(), mapped.end());
+@@ -135,7 +136,7 @@ public:
+       // `_sub_topology`. If this is the case, mark those entities with
+       // -1.
+ 
+-      auto mapped = std::forward<decltype(entities)>(entities)
++      auto mapped = std::forward<R>(entities)
+                     | std::views::transform(
+                         [&topology_to_sub_topology](std::int32_t i)
+                         {

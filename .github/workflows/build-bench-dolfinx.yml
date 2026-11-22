@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths: &paths
       - spack_pkgs/spack_repo/ukri_bench/packages/bench_dolfinx/**
+      - spack_pkgs/spack_repo/ukri_bench/packages/fenics_dolfinx/**
       - spack_pkgs/spack_repo/ukri_bench/repo.yaml
       - .github/workflows/build-package.yml
       - .github/spack/**
@@ -23,17 +24,23 @@ concurrency:
 
 jobs:
   cpu:
+    strategy:
+      fail-fast: false
+      matrix:
+        # Spack picks 0.10.0 for a plain `bench-dolfinx`, so main is listed
+        # explicitly
+        spec: ["bench-dolfinx@main", "bench-dolfinx@0.10.0"]
     permissions:
       contents: read
       packages: write # push to the OCI build cache
     uses: ./.github/workflows/build-package.yml
     with:
       package: bench-dolfinx
+      spec: ${{ matrix.spec }}
       executable: bin/bench_dolfinx
       smoke-test: |
-        # The CPU operator only supports qmode=0 (P+1 quadrature points); the
-        # benchmark defaults to qmode=1, which is GPU-only
-        "${VIEW}/bin/mpiexec" -n 2 "${PREFIX}/bin/bench_dolfinx" --ndofs=10000 --degree=3 --nreps=10 --qmode=0
+        # On CPU, the benchmark defaults to (and only supports) qmode=0
+        "${VIEW}/bin/mpiexec" -n 2 "${PREFIX}/bin/bench_dolfinx" --ndofs=10000 --degree=3 --nreps=10
 
   # Starts after the CPU build, which caches the (large) dependency stack the GPU
   # builds share. Compile-only: runners have no GPU, so only the executable check

@@ -30,4 +30,6 @@ jobs:
     with:
       package: bench-dolfinx
       smoke-test: |
-        "${VIEW}/bin/mpiexec" -n 2 "${PREFIX}/bin/bench_dolfinx" --ndofs=10000 --degree=3 --nreps=10
+        # The CPU operator only supports qmode=0 (P+1 quadrature points); the
+        # benchmark defaults to qmode=1, which is GPU-only
+        "${VIEW}/bin/mpiexec" -n 2 "${PREFIX}/bin/bench_dolfinx" --ndofs=10000 --degree=3 --nreps=10 --qmode=0

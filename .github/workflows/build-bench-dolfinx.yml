@@ -1,0 +1,32 @@
+name: Build bench-dolfinx
+
+on:
+  push:
+    branches: [main]
+    paths: &paths
+      - spack_pkgs/spack_repo/ukri_bench/packages/bench_dolfinx/**
+      - spack_pkgs/spack_repo/ukri_bench/repo.yaml
+      - .github/workflows/build-package.yml
+      - .github/workflows/build-bench-dolfinx.yml
+  pull_request:
+    paths: *paths
+  schedule:
+    # Weekly, to catch breakage from new Spack and spack-packages versions
+    - cron: "0 3 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    uses: ./.github/workflows/build-package.yml
+    with:
+      package: bench-dolfinx
+      spec: bench-dolfinx
+      smoke-test: |
+        "${VIEW}/bin/mpiexec" -n 2 "${PREFIX}/bin/bench_dolfinx" --ndofs=10000 --degree=3 --nreps=10

@@ -1,0 +1,170 @@
+# Reusable workflow: build one package from this repository with the latest
+# Spack release and the latest spack-packages (builtin) commit.
+#
+# Dependencies are installed from a Spack build cache kept in the GitHub
+# Actions cache; the package itself is always built from source.
+
+name: Build package
+
+on:
+  workflow_call:
+    inputs:
+      package:
+        description: Package name (used for cache keys and artifact names)
+        required: true
+        type: string
+      spec:
+        description: Spec to build
+        required: true
+        type: string
+      smoke-test:
+        description: >-
+          Shell commands run after the build. SPACK_ENV_DIR, VIEW (the
+          environment view) and PREFIX (the package install prefix) are set.
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: ${{ inputs.spec }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve latest Spack release and spack-packages commit
+        id: versions
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          spack_tag=$(gh release view --repo spack/spack --json tagName --jq .tagName)
+          packages_sha=$(git ls-remote https://github.com/spack/spack-packages.git refs/heads/develop | cut -f1)
+          if [ -z "${spack_tag}" ] || [ -z "${packages_sha}" ]; then
+            echo "Failed to resolve Spack versions" >&2
+            exit 1
+          fi
+          echo "spack-tag=${spack_tag}" >> "${GITHUB_OUTPUT}"
+          echo "packages-sha=${packages_sha}" >> "${GITHUB_OUTPUT}"
+          {
+            echo "### ${{ inputs.spec }}"
+            echo "- Spack: \`${spack_tag}\`"
+            echo "- spack-packages: \`${packages_sha}\`"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+      - name: Install Spack
+        env:
+          SPACK_TAG: ${{ steps.versions.outputs.spack-tag }}
+          PACKAGES_SHA: ${{ steps.versions.outputs.packages-sha }}
+        run: |
+          spack_root="${RUNNER_TEMP}/spack"
+          git clone --depth=1 --branch "${SPACK_TAG}" https://github.com/spack/spack.git "${spack_root}"
+          # Pin the builtin package repository to the resolved commit
+          cat > "${spack_root}/etc/spack/repos.yaml" << EOF
+          repos:
+            builtin::
+              git: https://github.com/spack/spack-packages.git
+              commit: ${PACKAGES_SHA}
+          EOF
+          echo "${spack_root}/bin" >> "${GITHUB_PATH}"
+          {
+            echo "SPACK_ENV_DIR=${RUNNER_TEMP}/env"
+            echo "MIRROR_DIR=${RUNNER_TEMP}/mirror"
+          } >> "${GITHUB_ENV}"
+
+      - name: Configure Spack
+        run: |
+          spack --version
+          spack repo add "${GITHUB_WORKSPACE}/spack_pkgs/spack_repo/ukri_bench"
+          spack repo list
+          # Generic target so that binaries are reusable across runner CPU models
+          spack config add "packages:all:require:'target=x86_64_v3'"
+          spack config add "config:build_stage:${RUNNER_TEMP}/spack-stage"
+          spack compiler find
+          spack external find cmake gmake
+
+      - name: Concretize
+        id: concretize
+        env:
+          SPEC: ${{ inputs.spec }}
+        run: |
+          spack env create -d "${SPACK_ENV_DIR}"
+          spack -e "${SPACK_ENV_DIR}" add "${SPEC}"
+          # Concretize before any binary mirror is configured, so the result
+          # (and hence the cache key) does not depend on the cache contents
+          spack -e "${SPACK_ENV_DIR}" concretize --fresh
+          deps_hash=$(python3 -I - "${SPACK_ENV_DIR}/spack.lock" << 'EOF'
+          import hashlib, json, sys
+          lock = json.load(open(sys.argv[1]))
+          roots = {r["hash"] for r in lock["roots"]}
+          deps = sorted(set(lock["concrete_specs"]) - roots)
+          print(hashlib.sha256("\n".join(deps).encode()).hexdigest()[:16])
+          EOF
+          )
+          echo "deps-hash=${deps_hash}" >> "${GITHUB_OUTPUT}"
+
+      - name: Restore dependency cache
+        id: cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ runner.temp }}/mirror
+          key: spack-deps-${{ inputs.package }}-${{ steps.versions.outputs.spack-tag }}-${{ steps.concretize.outputs.deps-hash }}
+          restore-keys: |
+            spack-deps-${{ inputs.package }}-${{ steps.versions.outputs.spack-tag }}-
+            spack-deps-${{ inputs.package }}-
+            spack-deps-
+
+      - name: Install dependencies
+        run: |
+          if [ -d "${MIRROR_DIR}" ]; then
+            spack mirror add --unsigned gha-cache "file://${MIRROR_DIR}"
+            spack buildcache update-index gha-cache
+          fi
+          spack -e "${SPACK_ENV_DIR}" install --only dependencies --fail-fast
+
+      - name: Update dependency cache
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          # Push only the current dependencies to a fresh mirror, dropping stale entries
+          new_mirror="${RUNNER_TEMP}/mirror-new"
+          spack -e "${SPACK_ENV_DIR}" buildcache push --unsigned --only dependencies --update-index "${new_mirror}"
+          rm -rf "${RUNNER_TEMP}/mirror"
+          mv "${new_mirror}" "${RUNNER_TEMP}/mirror"
+          du -sh "${RUNNER_TEMP}/mirror"
+
+      - name: Save dependency cache
+        if: steps.cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ runner.temp }}/mirror
+          key: ${{ steps.cache.outputs.cache-primary-key }}
+
+      - name: Build ${{ inputs.package }}
+        run: |
+          spack -e "${SPACK_ENV_DIR}" install --use-buildcache package:never,dependencies:only --fail-fast
+          spack -e "${SPACK_ENV_DIR}" find -lv
+
+      - name: Smoke test
+        if: inputs.smoke-test != ''
+        env:
+          SMOKE_TEST: ${{ inputs.smoke-test }}
+          PACKAGE: ${{ inputs.package }}
+        run: |
+          export VIEW="${SPACK_ENV_DIR}/.spack-env/view"
+          PREFIX=$(spack -e "${SPACK_ENV_DIR}" location -i "${PACKAGE}")
+          export PREFIX
+          bash -euo pipefail -c "${SMOKE_TEST}"
+
+      - name: Upload build logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: spack-build-logs-${{ inputs.package }}
+          path: |
+            ${{ runner.temp }}/spack-stage/**/spack-build-out.txt
+            ${{ runner.temp }}/spack-stage/**/spack-build-env*.txt
+            ${{ runner.temp }}/spack-stage/**/spack-configure-args.txt
+          if-no-files-found: ignore

@@ -41,5 +41,15 @@ directory.
 ## Development
 
 Python style is checked with [ruff](https://docs.astral.sh/ruff/)
-(`ruff check .`). CI also audits and concretizes the packages against a pinned
-Spack release; see [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
+(`ruff check .`). GitHub Actions workflows:
+
+- [`ci.yml`](.github/workflows/ci.yml): ruff, and `spack audit`/`spack spec`
+  against a pinned Spack release.
+- [`build-bench-dolfinx.yml`](.github/workflows/build-bench-dolfinx.yml) and
+  [`build-nemo.yml`](.github/workflows/build-nemo.yml): build each package
+  with the latest Spack release and the latest
+  [spack-packages](https://github.com/spack/spack-packages) commit, then run a
+  smoke test. They run on changes to the package, weekly, and on demand.
+  Dependencies come from a Spack build cache stored in the GitHub Actions
+  cache; the package itself is always built from source. The shared logic is
+  in [`build-package.yml`](.github/workflows/build-package.yml).

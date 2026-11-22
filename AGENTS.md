@@ -20,9 +20,10 @@ spack_pkgs/spack_repo/ukri_bench/
 .github/
   spack/ci-env.yaml                # Spack environment template for build workflows
   spack/versions.env               # Spack release and spack-packages commit (all workflows)
-  workflows/ci.yml                 # ruff + spack audit/spec
+  workflows/ci.yml                 # ruff + spack audit/spec/expected failures
   workflows/build-package.yml      # reusable: build one package
   workflows/build-<pkg>.yml        # per-package callers
+  scripts/check-tags.py            # version tag -> commit check (ci.yml)
 ```
 
 Package directories use underscores (`bench_dolfinx`); package names use
@@ -66,6 +67,7 @@ With Spack available:
 ```console
 spack repo add spack_pkgs/spack_repo/ukri_bench
 spack audit packages bench-dolfinx fenics-dolfinx nemo
+spack python .github/scripts/check-tags.py bench-dolfinx nemo
 spack spec bench-dolfinx
 spack spec nemo +openmp
 ```
@@ -74,8 +76,12 @@ There is no local test suite; CI is the integration test.
 
 ## CI
 
-- `ci.yml`: ruff, then `spack audit` and `spack spec` for several variants,
-  against the pinned spack-packages commit.
+- `ci.yml`: ruff; `spack audit configs`, `packages` and `packages-https` for
+  every package directory; `.github/scripts/check-tags.py` (each `tag=`
+  still points at its `commit=`); `spack spec` for several variants; and
+  `expect_fail` checks that `conflicts()`/`requires()` reject unsupported
+  specs with the expected message. When adding a variant, conflict or GPU
+  spec, add a matching `spack spec` or `expect_fail` line.
 - `build-bench-dolfinx.yml`, `build-nemo.yml`: build the package in an
   `ubuntu:26.04` container and run a smoke test. Dependencies are taken from
   and pushed to the Spack OCI build cache

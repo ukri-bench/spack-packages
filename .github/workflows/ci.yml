@@ -42,16 +42,68 @@ jobs:
           spack_ref: ${{ env.SPACK_VERSION }}
           packages_ref: ${{ env.SPACK_PACKAGES_COMMIT }}
           buildcache: false
-      - name: Audit and concretize
+      - name: Add package repository
         run: |
           spack repo add "${GITHUB_WORKSPACE}/spack_pkgs/spack_repo/ukri_bench"
-          spack audit packages bench-dolfinx fenics-dolfinx nemo
+          # Every package in the repository (directory names use underscores)
+          pkgs=$(cd spack_pkgs/spack_repo/ukri_bench/packages && ls -d */ | tr -d / | tr _ -)
+          echo "PKGS=$(echo ${pkgs})" >> "${GITHUB_ENV}"
+
+      - name: Audit
+        run: |
+          spack audit configs
+          spack audit packages ${PKGS}
+          spack audit packages-https ${PKGS}
+
+      - name: Check version tags
+        # Only the default versions are fetched by the build workflows
+        run: spack python .github/scripts/check-tags.py ${PKGS}
+
+      - name: Concretize
+        run: |
           set -x
           spack spec bench-dolfinx
           spack spec bench-dolfinx@main
+          # GPU specs: keep in sync with build-bench-dolfinx.yml
           spack spec bench-dolfinx +cuda cuda_arch=90
           spack spec bench-dolfinx +rocm amdgpu_target=gfx90a
+          spack spec bench-dolfinx@main +cuda cuda_arch=90
+          spack spec bench-dolfinx@main +rocm amdgpu_target=gfx90a
           spack spec nemo
           spack spec nemo config=BENCH +ice +pisces
+          spack spec nemo ~mpi
           spack spec nemo +openmp
           spack spec nemo +openmp +openmp_offload openmp_flags=-fopenmp
+
+      - name: Check unsupported specs are rejected
+        run: |
+          # expect_fail <pattern> <spec>: the spec must fail to concretize with an
+          # error matching the extended regex <pattern>
+          expect_fail() {
+            pattern=$1
+            shift
+            if out=$(spack spec "$@" 2>&1); then
+              echo "::error::spack spec $* concretized but should have failed"
+              return 1
+            fi
+            if ! grep -Eq "${pattern}" <<< "${out}"; then
+              echo "${out}"
+              echo "::error::spack spec $* failed for an unexpected reason"
+              return 1
+            fi
+            echo "ok: $* is rejected"
+          }
+          rc=0
+          # Spack does not always report the conflict message for these
+          expect_fail "both ROCm and CUDA|unsatisfiable" \
+            bench-dolfinx +cuda +rocm cuda_arch=90 amdgpu_target=gfx90a || rc=1
+          expect_fail "CUDA architecture must be specified|unsatisfiable" \
+            bench-dolfinx +cuda || rc=1
+          expect_fail "AMD GPU target must be specified|unsatisfiable" \
+            bench-dolfinx +rocm || rc=1
+          expect_fail "XIOS spack package is currently broken" nemo +xios || rc=1
+          expect_fail "openmp_flags must be set" nemo +openmp +openmp_offload || rc=1
+          expect_fail "generic_config must be set" nemo config=GENERIC || rc=1
+          expect_fail "does not support PISCES" \
+            nemo config=GOSI10p0.0_like_eORCA1 +pisces || rc=1
+          exit "${rc}"

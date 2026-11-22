@@ -1,0 +1,45 @@
+name: Set up Spack for UKRI benchmarks
+description: >-
+  Install the Spack release and spack/spack-packages commit pinned in
+  .github/spack/versions.env of ukri-bench/spack-packages. Exports
+  SPACK_VERSION, SPACK_PACKAGES_COMMIT and UKRI_BENCH_CI_ENV (path to the
+  shared Spack environment, .github/spack/ci-env.yaml) for later steps.
+  Workflows in other repositories use it so their dependencies concretize to
+  the same hashes and come from this repository's build cache.
+
+inputs:
+  buildcache:
+    description: Also use Spack's public GitHub Actions build cache
+    required: false
+    default: "true"
+
+outputs:
+  spack-version:
+    description: Spack release (git ref)
+    value: ${{ steps.versions.outputs.SPACK_VERSION }}
+  spack-packages-commit:
+    description: spack/spack-packages commit
+    value: ${{ steps.versions.outputs.SPACK_PACKAGES_COMMIT }}
+  ci-env:
+    description: Path to the shared Spack environment file
+    value: ${{ steps.versions.outputs.UKRI_BENCH_CI_ENV }}
+
+runs:
+  using: composite
+  steps:
+    - name: Load Spack versions
+      id: versions
+      shell: sh
+      run: |
+        spack_dir=$(cd "${GITHUB_ACTION_PATH}/../../spack" && pwd)
+        {
+          grep -E '^[A-Z_]+=' "${spack_dir}/versions.env"
+          echo "UKRI_BENCH_CI_ENV=${spack_dir}/ci-env.yaml"
+        } | tee -a "${GITHUB_ENV}" >> "${GITHUB_OUTPUT}"
+
+    - name: Set up Spack
+      uses: spack/setup-spack@16b756799ede8b28951287f89bcd3fdb32ec1ca3 # v3.0.0
+      with:
+        spack_ref: ${{ steps.versions.outputs.SPACK_VERSION }}
+        packages_ref: ${{ steps.versions.outputs.SPACK_PACKAGES_COMMIT }}
+        buildcache: ${{ inputs.buildcache }}

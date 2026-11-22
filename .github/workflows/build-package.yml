@@ -29,8 +29,8 @@ on:
         default: ""
 
 env:
-  # SPACK_VERSION and SPACK_PACKAGES_COMMIT are loaded from
-  # .github/spack/versions.env after checkout
+  # SPACK_VERSION and SPACK_PACKAGES_COMMIT are set by
+  # .github/actions/setup-spack from .github/spack/versions.env
   # Credentials for the OCI build cache
   GITHUB_USER: ${{ github.actor }}
   GITHUB_TOKEN: ${{ github.token }}
@@ -63,14 +63,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Load Spack versions
-        run: grep -E '^[A-Z_]+=' .github/spack/versions.env >> "${GITHUB_ENV}"
-
       - name: Set up Spack
-        uses: spack/setup-spack@16b756799ede8b28951287f89bcd3fdb32ec1ca3 # v3.0.0
-        with:
-          spack_ref: ${{ env.SPACK_VERSION }}
-          packages_ref: ${{ env.SPACK_PACKAGES_COMMIT }}
+        uses: ./.github/actions/setup-spack
 
       - name: Add package repository
         run: |
@@ -87,7 +81,7 @@ jobs:
         env:
           SPEC: ${{ inputs.spec || inputs.package }}
         run: |
-          spack env create ci .github/spack/ci-env.yaml
+          spack env create ci "${UKRI_BENCH_CI_ENV}"
           spack -e ci add "${SPEC}"
           spack -e ci concretize -j "$(nproc)"
 

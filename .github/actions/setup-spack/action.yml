@@ -2,8 +2,10 @@ name: Set up Spack for UKRI benchmarks
 description: >-
   Install the Spack release and spack/spack-packages commit pinned in
   .github/spack/versions.env of ukri-bench/spack-packages. Exports
-  SPACK_VERSION, SPACK_PACKAGES_COMMIT and UKRI_BENCH_CI_ENV (path to the
-  shared Spack environment, .github/spack/ci-env.yaml) for later steps.
+  SPACK_VERSION, SPACK_PACKAGES_COMMIT, UKRI_BENCH_CI_ENV (path to the shared
+  Spack environment, .github/spack/ci-env.yaml) and UKRI_BENCH_REPO (path to
+  the ukri_bench package repository) for later steps. All come from the same
+  revision of ukri-bench/spack-packages as the action.
   Workflows in other repositories use it so their dependencies concretize to
   the same hashes and come from this repository's build cache.
 
@@ -23,6 +25,9 @@ outputs:
   ci-env:
     description: Path to the shared Spack environment file
     value: ${{ steps.versions.outputs.UKRI_BENCH_CI_ENV }}
+  repo:
+    description: Path to the ukri_bench Spack package repository
+    value: ${{ steps.versions.outputs.UKRI_BENCH_REPO }}
 
 runs:
   using: composite
@@ -31,10 +36,11 @@ runs:
       id: versions
       shell: sh
       run: |
-        spack_dir=$(cd "${GITHUB_ACTION_PATH}/../../spack" && pwd)
+        root=$(cd "${GITHUB_ACTION_PATH}/../../.." && pwd)
         {
-          grep -E '^[A-Z_]+=' "${spack_dir}/versions.env"
-          echo "UKRI_BENCH_CI_ENV=${spack_dir}/ci-env.yaml"
+          grep -E '^[A-Z_]+=' "${root}/.github/spack/versions.env"
+          echo "UKRI_BENCH_CI_ENV=${root}/.github/spack/ci-env.yaml"
+          echo "UKRI_BENCH_REPO=${root}/spack_pkgs/spack_repo/ukri_bench"
         } | tee -a "${GITHUB_ENV}" >> "${GITHUB_OUTPUT}"
 
     - name: Set up Spack

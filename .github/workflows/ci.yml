@@ -45,13 +45,23 @@ jobs:
       - name: Audit and concretize
         run: |
           spack repo add "${GITHUB_WORKSPACE}/spack_pkgs/spack_repo/ukri_bench"
-          spack audit packages bench-dolfinx fenics-dolfinx nemo
+          # fenics-dolfinx is the builtin package plus a patch; audit only our own
+          spack audit packages bench-dolfinx nemo
           set -x
           spack spec bench-dolfinx
           spack spec bench-dolfinx@main
           spack spec bench-dolfinx +cuda cuda_arch=90
           spack spec bench-dolfinx +rocm amdgpu_target=gfx90a
+          spack spec bench-dolfinx@main +cuda cuda_arch=90
+          spack spec bench-dolfinx@main +rocm amdgpu_target=gfx90a
           spack spec nemo
           spack spec nemo config=BENCH +ice +pisces
+          spack spec nemo ~mpi
           spack spec nemo +openmp
           spack spec nemo +openmp +openmp_offload openmp_flags=-fopenmp
+          # Unsupported combinations must be rejected
+          for spec in "bench-dolfinx +cuda +rocm cuda_arch=90 amdgpu_target=gfx90a" \
+              "bench-dolfinx +cuda" "nemo +openmp +openmp_offload" "nemo config=GENERIC"; do
+            # shellcheck disable=SC2086
+            if spack spec ${spec}; then echo "::error::${spec} should be rejected"; exit 1; fi
+          done

@@ -34,12 +34,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Load Spack versions
+        run: grep -E '^[A-Z_]+=' .github/spack/versions.env >> "${GITHUB_ENV}"
       - name: Set up Spack
-        uses: ./.github/actions/setup-spack
+        uses: spack/setup-spack@16b756799ede8b28951287f89bcd3fdb32ec1ca3 # v3.0.0
         with:
+          spack_ref: ${{ env.SPACK_VERSION }}
+          packages_ref: ${{ env.SPACK_PACKAGES_COMMIT }}
           buildcache: false
       - name: Audit and concretize
         run: |
+          spack repo add "${GITHUB_WORKSPACE}/spack_pkgs/spack_repo/ukri_bench"
           spack audit packages bench-dolfinx nemo
           set -x
           spack spec bench-dolfinx

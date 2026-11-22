@@ -19,7 +19,6 @@ spack_pkgs/spack_repo/ukri_bench/
 .github/
   spack/ci-env.yaml                # Spack environment template for build workflows
   spack/versions.env               # Spack release and spack-packages commit (all workflows)
-  actions/setup-spack/action.yml   # Spack with those pins + this repo; used by benchmark repos
   workflows/ci.yml                 # ruff + spack audit/spec
   workflows/build-package.yml      # reusable: build one package
   workflows/build-<pkg>.yml        # per-package callers
@@ -85,11 +84,9 @@ There is no local test suite; CI is the integration test.
   job fails or is cancelled, so partial progress is kept. Fork PRs only read.
 - Version pins: the Spack release (`SPACK_VERSION`) and spack-packages commit
   (`SPACK_PACKAGES_COMMIT`) are set once, in `.github/spack/versions.env`.
-  Workflows install Spack with `.github/actions/setup-spack`, which reads that
-  file; benchmark repositories use the same action
-  (`ukri-bench/spack-packages/.github/actions/setup-spack@main`), so they share
-  the pins and the build cache. Bump them deliberately: a new spack-packages
-  commit re-solves the graph and can invalidate cached binaries.
+  `ci.yml` and `build-package.yml` load that file into the job environment
+  and pass the values to `spack/setup-spack`. Bump them deliberately: a new
+  spack-packages commit re-solves the graph and can invalidate cached binaries.
 - Do not point the build cache at `ghcr.io/ukri-bench/spack-buildcache`. It
   belongs to `benchmark-dolfinx`, and this repository cannot write to it.
 - A cold cache means a long first build (dependencies from source).

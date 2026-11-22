@@ -35,10 +35,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Builtin package repo: the snapshot used by the Spack release by default,
-        # and the commit the build workflows use (keep in sync with build-package.yml)
+        # Builtin package repo: the oldest release snapshot with DOLFINx 0.11 (the
+        # default snapshot of Spack v1.2.2, releases/v2026.06, has only 0.10), and
+        # the commit the build workflows use (keep in sync with build-package.yml)
         packages_ref:
-          - releases/v2026.06
+          - releases/v2026.10
           - 731577eee0004659abb29a12e42d4c52a48e7285
     name: spack (spack-packages ${{ matrix.packages_ref }})
     steps:

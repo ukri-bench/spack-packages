@@ -25,10 +25,10 @@ class BenchDolfinx(CMakePackage, CudaPackage, ROCmPackage):
     depends_on("c", type="build")
     depends_on("cxx", type="build")
 
-    depends_on("fenics-dolfinx@0.10 partitioners:=scotch")
-    depends_on("fenics-basix@0.10")
+    depends_on("fenics-dolfinx@0.11 partitioners:=scotch")
+    depends_on("fenics-basix@0.11")
     # FFCx-generated code must match the UFCx interface of DOLFINx
-    depends_on("py-fenics-ffcx@0.10", type="build")
+    depends_on("py-fenics-ffcx@0.11", type="build")
 
     depends_on("boost +program_options+json")
     # Not used directly; selects 64-bit Scotch for DOLFINx graph partitioning

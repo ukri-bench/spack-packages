@@ -30,7 +30,9 @@ jobs:
     with:
       package: nemo
       smoke-test: |
-        test -e "${PREFIX}/EXP00/nemo.exe"
+        # makenemo links EXP00/nemo -> BLD/bin/nemo.exe
+        nemo="${PREFIX}/EXP00/nemo"
+        if [[ ! -x "${nemo}" ]]; then echo "Missing executable ${nemo}" >&2; exit 1; fi
         # `! cmd` is ignored by `set -e`, so test explicitly
-        if ldd "${PREFIX}/EXP00/nemo.exe" | grep "not found"; then exit 1; fi
+        if ldd "${nemo}" | grep "not found"; then exit 1; fi
         "${PREFIX}/bin/nemo-wrapper" --help

@@ -14,6 +14,7 @@ spack_pkgs/spack_repo/ukri_bench/
   repo.yaml                        # namespace and Package API version
   packages/
     bench_dolfinx/package.py       # DOLFINx benchmark (CMake; CPU/CUDA/ROCm)
+    fenics_dolfinx/package.py      # builtin fenics-dolfinx + nvcc patch for 0.11
     nemo/package.py                # NEMO ocean model (makenemo/FCM)
     nemo/nemo-wrapper.sh           # run-dir wrapper; @PREFIX@/@MPI@/@XIOS@ filled at install
 .github/
@@ -64,7 +65,7 @@ With Spack available:
 
 ```console
 spack repo add spack_pkgs/spack_repo/ukri_bench
-spack audit packages bench-dolfinx nemo
+spack audit packages bench-dolfinx fenics-dolfinx nemo
 spack spec bench-dolfinx
 spack spec nemo +openmp
 ```

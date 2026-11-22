@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths: &paths
       - spack_pkgs/spack_repo/ukri_bench/packages/bench_dolfinx/**
+      - spack_pkgs/spack_repo/ukri_bench/packages/fenics_dolfinx/**
       - spack_pkgs/spack_repo/ukri_bench/repo.yaml
       - .github/workflows/build-package.yml
       - .github/spack/**

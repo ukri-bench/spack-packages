@@ -22,7 +22,7 @@ spack:
 
   mirrors:
     ukri-bench-buildcache:
-      url: oci://ghcr.io/ukri-bench/spack-buildcache
+      url: oci://ghcr.io/ukri-bench/spack-packages-buildcache
       binary: true
       signed: false
       access_pair:

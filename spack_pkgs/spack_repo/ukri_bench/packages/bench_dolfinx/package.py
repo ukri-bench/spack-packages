@@ -42,10 +42,9 @@ class BenchDolfinx(CMakePackage, CudaPackage, ROCmPackage):
     root_cmakelists_dir = "src"
 
     def cmake_args(self):
-        spec = self.spec
         args = []
-        if spec.satisfies("+rocm"):
-            args.append(self.define("HIP_ARCH", spec.variants["amdgpu_target"].value))
-        if spec.satisfies("+cuda"):
-            args.append(self.define("CUDA_ARCH", spec.variants["cuda_arch"].value))
+        if self.spec.satisfies("+rocm"):
+            args.append(self.define_from_variant("HIP_ARCH", "amdgpu_target"))
+        if self.spec.satisfies("+cuda"):
+            args.append(self.define_from_variant("CUDA_ARCH", "cuda_arch"))
         return args

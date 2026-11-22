@@ -52,6 +52,6 @@ Python style is checked with [ruff](https://docs.astral.sh/ruff/)
   [`build-package.yml`](.github/workflows/build-package.yml)), then run a
   smoke test. They run on changes to the package, weekly, and on demand.
   Dependencies are taken from and pushed to a Spack OCI build cache at
-  `ghcr.io/ukri-bench/spack-buildcache` (configured in
+  `ghcr.io/ukri-bench/spack-packages-buildcache` (configured in
   [`.github/spack/ci-env.yaml`](.github/spack/ci-env.yaml)); the package
   itself is always built from source.

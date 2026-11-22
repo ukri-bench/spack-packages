@@ -3,7 +3,6 @@
 # SPDX-License-Identifier: MIT
 
 import os
-import sys
 import textwrap
 from pathlib import Path
 
@@ -112,6 +111,14 @@ class Nemo(Package):
     # --- Compilers ---
     depends_on("c", type="build")
     depends_on("fortran", type="build")
+    requires(
+        "%fortran=gcc",
+        "%fortran=nvhpc",
+        "%fortran=oneapi",
+        "%fortran=cce",
+        policy="one_of",
+        msg="Supported Fortran compilers are gcc, nvhpc, oneapi and cce",
+    )
 
     # --- Dependencies ---
     depends_on("gmake", type="build")
@@ -169,10 +176,7 @@ class Nemo(Package):
         else:
             del_keys.extend(["key_xios", "key_xios3", "key_iomput"])
 
-        if spec.satisfies("@4.2:"):
-            (del_keys if spec.satisfies("+mpi") else add_keys).append("key_mpi_off")
-        elif spec.satisfies("@4.0:4.1"):
-            (add_keys if spec.satisfies("+mpi") else del_keys).append("key_mpp_mpi")
+        (del_keys if spec.satisfies("+mpi") else add_keys).append("key_mpi_off")
 
         # TODO:
         # if spec.satisfies("%nvhpc"):
@@ -205,8 +209,6 @@ class Nemo(Package):
         ar = which("ar", required=True).path
         gmake = join_path(spec["gmake"].prefix.bin, "gmake")
         fcompiler = spec["mpi"].mpifc
-        h5dir = spec["hdf5"].prefix
-        ncdir = spec["netcdf-c"].prefix
         nfdir = spec["netcdf-fortran"].prefix
         xiosdir = ""
         psydir = ""
@@ -215,7 +217,7 @@ class Nemo(Package):
 
         if spec.satisfies("+omp"):
             psydir = spec["py-psyclone"].prefix
-            fcompiler = join_path(spec["py-psyclone"].prefix.bin, "psyclonefc")
+            fcompiler = join_path(psydir.bin, "psyclonefc")
 
         if spec.satisfies("%fortran=gcc"):
             fflags = (
@@ -234,11 +236,6 @@ class Nemo(Package):
                 "-em -s integer32 -s real64 -O2 -hvector_classic -hflex_mp=intolerant -N1023 -M878"
             )
             arch_extra = "bld::tool::fc_modsearch -J"
-        else:
-            raise InstallError(
-                f"Unsupported Fortran compiler {spec['fortran'].name}: "
-                "supported compilers are gcc, nvhpc, oneapi and cce"
-            )
 
         if spec.satisfies("+omp~omp_offload"):
             openmp_flag = self.compiler.openmp_flag
@@ -252,34 +249,22 @@ class Nemo(Package):
                 fflags += " -gpu=math_uniform"
                 ldflags += " -gpu=math_uniform"
 
-        rpath_dirs = [
-            spec["hdf5"].libs.directories[0],
-            spec["netcdf-c"].libs.directories[0],
-            spec["netcdf-fortran"].libs.directories[0],
-        ]
         xios_inc = ""
         xios_lib = ""
         if spec.satisfies("+xios"):
             xiosdir = spec["xios"].prefix
             xios_inc = "-I%XIOS_HOME/inc"
             xios_lib = "-L%XIOS_HOME/lib -lxios -lstdc++"
-            rpath_dirs.append(spec["xios"].prefix.lib)
-        ldflags += "".join(f" -Wl,-rpath,{d}" for d in rpath_dirs)
 
-        ncdf_lib = " ".join(
-            [
-                spec["netcdf-fortran"].libs.ld_flags,
-                spec["netcdf-c"].libs.ld_flags,
-                f"-L{spec['hdf5'].libs.directories[0]} -lhdf5_hl -lhdf5",
-            ]
-        )
+        # Link deps are RPATHed by Spack's compiler wrapper (used via the MPI wrappers)
+        ncdf_lib = (
+            spec["netcdf-fortran"].libs + spec["netcdf-c"].libs + spec["hdf5:hl"].libs
+        ).ld_flags
 
         # FCM preprocesses with the system cpp (traditional mode), which is not a Spack dependency
         arch = textwrap.dedent(
             f"""\
             %NCDFF_HOME          {nfdir}
-            %NCDFC_HOME          {ncdir}
-            %HDF5_HOME           {h5dir}
             %XIOS_HOME           {xiosdir}
             %PSYCLONE_HOME       {psydir}
 
@@ -334,14 +319,13 @@ class Nemo(Package):
                 os.symlink(xios_exe, xios_run_exe)
 
     def install(self, spec, prefix):
-        # Generate the run-directory wrapper script using Spack's own interpreter
-        params = [join_path(self.package_dir, "create_wrapper.py"), f"--prefix={prefix}"]
-        if spec.satisfies("+xios"):
-            params.append("--xios")
-        if spec.satisfies("+mpi"):
-            params.append("--mpi")
-
-        python = Executable(sys.executable)
-        python(*params)
-
         install_tree(str(self.config_path), prefix, symlinks=False)
+
+        # Run-directory wrapper script
+        wrapper = join_path(prefix.bin, "nemo-wrapper")
+        mkdirp(prefix.bin)
+        install(join_path(self.package_dir, "nemo-wrapper.sh"), wrapper)
+        filter_file("@PREFIX@", prefix, wrapper, string=True)
+        filter_file("@MPI@", "true" if spec.satisfies("+mpi") else "false", wrapper, string=True)
+        filter_file("@XIOS@", "true" if spec.satisfies("+xios") else "false", wrapper, string=True)
+        set_executable(wrapper)

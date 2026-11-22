@@ -14,9 +14,10 @@ on:
         required: true
         type: string
       spec:
-        description: Spec to build
-        required: true
+        description: "Spec to build (default: the package name)"
+        required: false
         type: string
+        default: ""
       smoke-test:
         description: >-
           Shell commands run after the build. VIEW (the environment view) and
@@ -26,10 +27,10 @@ on:
         default: ""
 
 env:
-  # Latest Spack release. Bump deliberately.
+  # Latest Spack release. Bump deliberately (and in ci.yml).
   SPACK_VERSION: v1.2.2
   # spack-packages (builtin repo) commit. Bumping re-solves the graph and can
-  # invalidate cached binaries. Bump deliberately:
+  # invalidate cached binaries. Bump deliberately (and in ci.yml):
   #   git ls-remote https://github.com/spack/spack-packages.git refs/heads/develop
   SPACK_PACKAGES_COMMIT: 731577eee0004659abb29a12e42d4c52a48e7285 # develop, 2026-11-22
   # Credentials for the OCI build cache
@@ -40,7 +41,7 @@ env:
 
 jobs:
   build:
-    name: ${{ inputs.spec }}
+    name: ${{ inputs.spec || inputs.package }}
     runs-on: ubuntu-26.04
     # Fixed base image, so cached binaries match the system they run on
     container: ubuntu:26.04
@@ -69,14 +70,14 @@ jobs:
           spack repo add "${GITHUB_WORKSPACE}/spack_pkgs/spack_repo/ukri_bench"
           spack repo list
           {
-            echo "### ${{ inputs.spec }}"
+            echo "### ${{ inputs.spec || inputs.package }}"
             echo "- Spack: \`${SPACK_VERSION}\`"
             echo "- spack-packages: \`${SPACK_PACKAGES_COMMIT}\`"
           } >> "${GITHUB_STEP_SUMMARY}"
 
       - name: Concretize
         env:
-          SPEC: ${{ inputs.spec }}
+          SPEC: ${{ inputs.spec || inputs.package }}
         run: |
           spack env create ci .github/spack/ci-env.yaml
           spack -e ci add "${SPEC}"

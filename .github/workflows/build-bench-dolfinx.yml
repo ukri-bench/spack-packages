@@ -21,9 +21,6 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
-permissions:
-  contents: read
-
 jobs:
   build:
     permissions:
@@ -32,6 +29,5 @@ jobs:
     uses: ./.github/workflows/build-package.yml
     with:
       package: bench-dolfinx
-      spec: bench-dolfinx
       smoke-test: |
         "${VIEW}/bin/mpiexec" -n 2 "${PREFIX}/bin/bench_dolfinx" --ndofs=10000 --degree=3 --nreps=10

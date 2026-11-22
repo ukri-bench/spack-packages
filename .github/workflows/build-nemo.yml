@@ -21,9 +21,6 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
-permissions:
-  contents: read
-
 jobs:
   build:
     permissions:
@@ -32,7 +29,7 @@ jobs:
     uses: ./.github/workflows/build-package.yml
     with:
       package: nemo
-      spec: nemo
       smoke-test: |
         test -e "${PREFIX}/EXP00/nemo.exe"
+        ! ldd "${PREFIX}/EXP00/nemo.exe" | grep "not found"
         "${PREFIX}/bin/nemo-wrapper" --help

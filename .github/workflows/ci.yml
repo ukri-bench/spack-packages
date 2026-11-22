@@ -36,19 +36,21 @@ jobs:
       fail-fast: false
       matrix:
         # Builtin package repo: the snapshot used by the Spack release by default,
-        # and the commit the build workflows use (keep in sync with build-package.yml)
+        # and the commit the build workflows use (empty: SPACK_PACKAGES_COMMIT from
+        # .github/spack/versions.env)
         packages_ref:
           - releases/v2026.06
-          - 731577eee0004659abb29a12e42d4c52a48e7285
-    name: spack (spack-packages ${{ matrix.packages_ref }})
+          - ""
+    name: spack (spack-packages ${{ matrix.packages_ref || 'pinned commit' }})
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Load Spack versions
+        run: grep -E '^[A-Z_]+=' .github/spack/versions.env >> "${GITHUB_ENV}"
       - name: Set up Spack
         uses: spack/setup-spack@16b756799ede8b28951287f89bcd3fdb32ec1ca3 # v3.0.0
         with:
-          # Keep in sync with build-package.yml
-          spack_ref: v1.2.2
-          packages_ref: ${{ matrix.packages_ref }}
+          spack_ref: ${{ env.SPACK_VERSION }}
+          packages_ref: ${{ matrix.packages_ref || env.SPACK_PACKAGES_COMMIT }}
           buildcache: false
       - name: Audit and concretize
         run: |

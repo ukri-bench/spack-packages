@@ -18,6 +18,7 @@ spack_pkgs/spack_repo/ukri_bench/
     nemo/nemo-wrapper.sh           # run-dir wrapper; @PREFIX@/@MPI@/@XIOS@ filled at install
 .github/
   spack/ci-env.yaml                # Spack environment template for build workflows
+  spack/versions.env               # Spack release and spack-packages commit (all workflows)
   workflows/ci.yml                 # ruff + spack audit/spec
   workflows/build-package.yml      # reusable: build one package
   workflows/build-<pkg>.yml        # per-package callers
@@ -83,9 +84,10 @@ There is no local test suite; CI is the integration test.
   is installed (Spack autopush), and the cache index is updated even when the
   job fails or is cancelled, so partial progress is kept. Fork PRs only read.
 - Version pins: the Spack release (`SPACK_VERSION`) and spack-packages commit
-  (`SPACK_PACKAGES_COMMIT`) are set in `build-package.yml` and must be kept in
-  sync with `ci.yml`. Bump them deliberately: a new spack-packages commit
-  re-solves the graph and can invalidate cached binaries.
+  (`SPACK_PACKAGES_COMMIT`) are set once, in `.github/spack/versions.env`, which
+  `build-package.yml` and `ci.yml` load after checkout. Bump them
+  deliberately: a new spack-packages commit re-solves the graph and can
+  invalidate cached binaries.
 - Do not point the build cache at `ghcr.io/ukri-bench/spack-buildcache`. It
   belongs to `benchmark-dolfinx`, and this repository cannot write to it.
 - A cold cache means a long first build (dependencies from source).

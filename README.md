@@ -58,11 +58,11 @@ spack install nemo +openmp +openmp_offload openmp_flags="-mp=gpu -gpu=cc90" %for
 ### Running
 
 - `bench-dolfinx` installs the executable `bench_dolfinx` (`bench_dolfinx -h`
-  lists options). CPU builds support only `--qmode=0`; the default
-  `--qmode=1` is GPU-only. For example:
+  lists options). `--qmode` defaults to 0 for CPU builds, which support
+  only `--qmode=0`, and to 1 for GPU builds. For example:
 
   ```console
-  mpiexec -n 2 bench_dolfinx --ndofs=10000 --degree=3 --nreps=10 --qmode=0
+  mpiexec -n 2 bench_dolfinx --ndofs=10000 --degree=3 --nreps=10
   ```
 
 - `nemo` installs the build configuration under its prefix, with the

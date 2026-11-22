@@ -101,7 +101,16 @@ jobs:
       # No --fail-fast: if one dependency fails, independent ones are still
       # built (and pushed)
       - name: Install dependencies
-        run: spack -e ci install -j "$(nproc)" --only dependencies --use-buildcache auto
+        run: |
+          spack -e ci install -j "$(nproc)" --only dependencies --use-buildcache auto
+          # --only dependencies skips build-only dependencies of the package itself.
+          # Install them here too, so they are built (and pushed) in this step and
+          # the package build below can take every dependency from the cache.
+          build_deps=$(spack -e ci python -c 'import spack.environment as ev; print(" ".join("/" + d.dag_hash() for r in ev.active_environment().concrete_roots() for d in r.dependencies(deptype="build")))')
+          if [ -n "${build_deps}" ]; then
+            # shellcheck disable=SC2086
+            spack -e ci install -j "$(nproc)" --no-add --use-buildcache auto ${build_deps}
+          fi
 
       - name: Build ${{ inputs.package }}
         run: |

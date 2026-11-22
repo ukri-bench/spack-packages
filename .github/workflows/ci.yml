@@ -45,9 +45,10 @@ jobs:
       - name: Audit and concretize
         run: |
           spack repo add "${GITHUB_WORKSPACE}/spack_pkgs/spack_repo/ukri_bench"
-          spack audit packages bench-dolfinx nemo
+          spack audit packages bench-dolfinx fenics-dolfinx nemo
           set -x
           spack spec bench-dolfinx
+          spack spec bench-dolfinx@main
           spack spec bench-dolfinx +cuda cuda_arch=90
           spack spec bench-dolfinx +rocm amdgpu_target=gfx90a
           spack spec nemo

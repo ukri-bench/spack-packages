@@ -16,6 +16,7 @@ class BenchDolfinx(CMakePackage, CudaPackage, ROCmPackage):
     git = "https://github.com/ukri-bench/benchmark-dolfinx.git"
 
     version("main", branch="main", no_cache=True)
+    version("0.10.0", tag="v0.10.0", commit="2f148fdda9e40af17fdf7a936b7357350ba41600")
 
     conflicts("+cuda", when="+rocm", msg="Cannot build for both ROCm and CUDA.")
     # The benchmark CMake treats an unset GPU arch as a CPU-only build
@@ -25,10 +26,13 @@ class BenchDolfinx(CMakePackage, CudaPackage, ROCmPackage):
     depends_on("c", type="build")
     depends_on("cxx", type="build")
 
-    depends_on("fenics-dolfinx@0.10 partitioners:=scotch")
-    depends_on("fenics-basix@0.10")
-    # FFCx-generated code must match the UFCx interface of DOLFINx
-    depends_on("py-fenics-ffcx@0.10", type="build")
+    depends_on("fenics-dolfinx partitioners:=scotch")
+    # Benchmark version -> DOLFINx/Basix/FFCx version. FFCx-generated code must
+    # match the UFCx interface of DOLFINx.
+    for ver, fenics_ver in [("0.10", "0.10"), ("main", "0.11")]:
+        depends_on(f"fenics-dolfinx@{fenics_ver}", when=f"@{ver}")
+        depends_on(f"fenics-basix@{fenics_ver}", when=f"@{ver}")
+        depends_on(f"py-fenics-ffcx@{fenics_ver}", type="build", when=f"@{ver}")
 
     depends_on("boost +program_options+json")
     # Not used directly; selects 64-bit Scotch for DOLFINx graph partitioning

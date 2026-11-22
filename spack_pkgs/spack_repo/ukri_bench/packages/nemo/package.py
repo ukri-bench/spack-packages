@@ -122,8 +122,8 @@ class Nemo(Package):
     depends_on("netcdf-c@4.9.0: +mpi +shared")
     depends_on("netcdf-fortran@4.6.1: +shared")
     depends_on("py-f90nml", type="run")
-    # psyclonefc was introduced in PSyclone 3.2
-    depends_on("py-psyclone@3.2:", type="build", when="+omp")
+    # psyclonefc was introduced in PSyclone 3.2; the upper bound excludes @master
+    depends_on("py-psyclone@3.2:3", type="build", when="+omp")
 
     @property
     def source_cfg(self):

@@ -74,8 +74,7 @@ There is no local test suite; CI is the integration test.
 ## CI
 
 - `ci.yml`: ruff, then `spack audit` and `spack spec` for several variants,
-  against both the builtin snapshot used by the pinned Spack release and the
-  pinned spack-packages commit.
+  against the pinned spack-packages commit.
 - `build-bench-dolfinx.yml`, `build-nemo.yml`: build the package in an
   `ubuntu:26.04` container and run a smoke test. Dependencies are taken from
   and pushed to the Spack OCI build cache

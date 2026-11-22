@@ -80,9 +80,8 @@ Python style is checked with [ruff](https://docs.astral.sh/ruff/)
 (`ruff check .` and `ruff format --check .`). GitHub Actions workflows:
 
 - [`ci.yml`](.github/workflows/ci.yml): ruff, then `spack audit` and
-  `spack spec` for several variants of each package, against both the builtin
-  package snapshot of the pinned Spack release and the pinned spack-packages
-  commit.
+  `spack spec` for several variants of each package, against the pinned
+  spack-packages commit.
 - [`build-bench-dolfinx.yml`](.github/workflows/build-bench-dolfinx.yml) and
   [`build-nemo.yml`](.github/workflows/build-nemo.yml): build each package in
   an `ubuntu:26.04` container (target `x86_64_v3`) with a pinned Spack release

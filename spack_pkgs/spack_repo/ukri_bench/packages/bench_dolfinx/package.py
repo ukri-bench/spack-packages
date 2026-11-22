@@ -34,6 +34,16 @@ class BenchDolfinx(CMakePackage, CudaPackage, ROCmPackage):
         depends_on(f"fenics-basix@{fenics_ver}", when=f"@{ver}")
         depends_on(f"py-fenics-ffcx@{fenics_ver}", type="build", when=f"@{ver}")
 
+    # nvcc 13 crashes (internal error) on an abbreviated function template in
+    # the DOLFINx 0.11 header mesh/EntityMap.h. The patch rewrites it as an
+    # explicit template. Applied for all variants, because the benchmark can
+    # also be compiled with nvcc against a CPU build of DOLFINx.
+    depends_on(
+        "fenics-dolfinx@0.11",
+        when="@main",
+        patches=[patch("dolfinx-0.11-entitymap-nvcc.patch")],
+    )
+
     depends_on("boost +program_options+json")
     # Not used directly; selects 64-bit Scotch for DOLFINx graph partitioning
     depends_on("scotch +int64")

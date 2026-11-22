@@ -137,7 +137,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: spack-build-logs-${{ inputs.package }}
+          name: spack-build-logs-${{ inputs.spec || inputs.package }}
           path: |
             /opt/spack-stage/**/spack-build-out.txt
             /opt/spack-stage/**/spack-build-env*.txt

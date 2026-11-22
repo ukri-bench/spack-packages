@@ -8,7 +8,7 @@ on:
       - spack_pkgs/spack_repo/ukri_bench/repo.yaml
       - .github/workflows/build-package.yml
       - .github/spack/**
-      - .github/actions/**
+      - .github/actions/setup-spack/**
       - .github/workflows/build-bench-dolfinx.yml
   pull_request:
     paths: *paths

@@ -29,8 +29,6 @@ on:
         default: ""
 
 env:
-  # SPACK_VERSION and SPACK_PACKAGES_COMMIT are set by
-  # .github/actions/setup-spack from .github/spack/versions.env
   # Credentials for the OCI build cache
   GITHUB_USER: ${{ github.actor }}
   GITHUB_TOKEN: ${{ github.token }}
@@ -66,10 +64,8 @@ jobs:
       - name: Set up Spack
         uses: ./.github/actions/setup-spack
 
-      - name: Add package repository
+      - name: Record versions
         run: |
-          spack repo add "${GITHUB_WORKSPACE}/spack_pkgs/spack_repo/ukri_bench"
-          spack repo list
           {
             echo "### ${{ inputs.spec || inputs.package }}"
             echo "- Spack: \`${SPACK_VERSION}\`"

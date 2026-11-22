@@ -40,7 +40,6 @@ jobs:
           buildcache: false
       - name: Audit and concretize
         run: |
-          spack repo add "${GITHUB_WORKSPACE}/spack_pkgs/spack_repo/ukri_bench"
           spack audit packages bench-dolfinx nemo
           set -x
           spack spec bench-dolfinx

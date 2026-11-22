@@ -19,7 +19,7 @@ spack_pkgs/spack_repo/ukri_bench/
 .github/
   spack/ci-env.yaml                # Spack environment template for build workflows
   spack/versions.env               # Spack release and spack-packages commit (all workflows)
-  actions/setup-spack/action.yml   # installs Spack with those pins; also used by benchmark repos
+  actions/setup-spack/action.yml   # Spack with those pins + this repo; used by benchmark repos
   workflows/ci.yml                 # ruff + spack audit/spec
   workflows/build-package.yml      # reusable: build one package
   workflows/build-<pkg>.yml        # per-package callers

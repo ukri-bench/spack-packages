@@ -1,11 +1,12 @@
 name: Set up Spack for UKRI benchmarks
 description: >-
   Install the Spack release and spack/spack-packages commit pinned in
-  .github/spack/versions.env of ukri-bench/spack-packages. Exports
-  SPACK_VERSION, SPACK_PACKAGES_COMMIT, UKRI_BENCH_CI_ENV (path to the shared
-  Spack environment, .github/spack/ci-env.yaml) and UKRI_BENCH_REPO (path to
-  the ukri_bench package repository) for later steps. All come from the same
-  revision of ukri-bench/spack-packages as the action.
+  .github/spack/versions.env of ukri-bench/spack-packages, and add the
+  ukri_bench package repository. Exports SPACK_VERSION, SPACK_PACKAGES_COMMIT,
+  UKRI_BENCH_CI_ENV (path to the shared Spack environment,
+  .github/spack/ci-env.yaml) and UKRI_BENCH_REPO (path to the ukri_bench
+  package repository) to later steps. All come from the same revision of
+  ukri-bench/spack-packages as the action.
   Workflows in other repositories use it so their dependencies concretize to
   the same hashes and come from this repository's build cache.
 
@@ -15,30 +16,25 @@ inputs:
     required: false
     default: "true"
 
-outputs:
-  spack-version:
-    description: Spack release (git ref)
-    value: ${{ steps.versions.outputs.SPACK_VERSION }}
-  spack-packages-commit:
-    description: spack/spack-packages commit
-    value: ${{ steps.versions.outputs.SPACK_PACKAGES_COMMIT }}
-  ci-env:
-    description: Path to the shared Spack environment file
-    value: ${{ steps.versions.outputs.UKRI_BENCH_CI_ENV }}
-  repo:
-    description: Path to the ukri_bench Spack package repository
-    value: ${{ steps.versions.outputs.UKRI_BENCH_REPO }}
-
 runs:
   using: composite
   steps:
+    # The values are also passed on as step outputs: a caller's workflow- or
+    # job-level env of the same name would take precedence over GITHUB_ENV
     - name: Load Spack versions
       id: versions
       shell: sh
       run: |
         root=$(cd "${GITHUB_ACTION_PATH}/../../.." && pwd)
+        versions=$(grep -E '^[A-Z_]+=' "${root}/.github/spack/versions.env" | tr -d '\r')
+        for name in SPACK_VERSION SPACK_PACKAGES_COMMIT; do
+          if ! printf '%s\n' "${versions}" | grep -Eq "^${name}=[^[:space:]]+$"; then
+            echo "::error::${name} missing or malformed in .github/spack/versions.env"
+            exit 1
+          fi
+        done
         {
-          grep -E '^[A-Z_]+=' "${root}/.github/spack/versions.env"
+          printf '%s\n' "${versions}"
           echo "UKRI_BENCH_CI_ENV=${root}/.github/spack/ci-env.yaml"
           echo "UKRI_BENCH_REPO=${root}/spack_pkgs/spack_repo/ukri_bench"
         } | tee -a "${GITHUB_ENV}" >> "${GITHUB_OUTPUT}"
@@ -49,3 +45,11 @@ runs:
         spack_ref: ${{ steps.versions.outputs.SPACK_VERSION }}
         packages_ref: ${{ steps.versions.outputs.SPACK_PACKAGES_COMMIT }}
         buildcache: ${{ inputs.buildcache }}
+
+    - name: Add ukri_bench package repository
+      shell: bash
+      env:
+        UKRI_BENCH_REPO: ${{ steps.versions.outputs.UKRI_BENCH_REPO }}
+      run: |
+        spack repo add "${UKRI_BENCH_REPO}"
+        spack repo list

@@ -14,6 +14,10 @@ UKRI Living Benchmarks.
   (built against DOLFINx 0.11). CPU by default; `+cuda
   cuda_arch=<arch>` or `+rocm amdgpu_target=<target>` for GPU builds (one of
   the two, with an architecture).
+- `fenics-dolfinx`: the builtin package with one added patch for DOLFINx
+  0.11, without which nvcc 13 aborts with an internal error on the header
+  `dolfinx/mesh/EntityMap.h`. It overrides the builtin package while this
+  repository is added.
 - `nemo`: the [NEMO](https://www.nemo-ocean.eu/) ocean model (5.0.2 by
   default; also 5.0.1 and 5.0), with optional PSyclone OpenMP CPU/GPU
   transformations. The source configuration is selected with `config=`.

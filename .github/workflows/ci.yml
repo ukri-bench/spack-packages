@@ -45,9 +45,14 @@ jobs:
       - name: Add package repository
         run: |
           spack repo add "${GITHUB_WORKSPACE}/spack_pkgs/spack_repo/ukri_bench"
-          # Every package in the repository (directory names use underscores)
-          pkgs=$(cd spack_pkgs/spack_repo/ukri_bench/packages && ls -d */ | tr -d / | tr _ -)
-          echo "PKGS=$(echo ${pkgs})" >> "${GITHUB_ENV}"
+          # Packages written here, not overrides of builtin packages
+          pkgs=$(spack python .github/scripts/repo-packages.py)
+          # With no names, spack audit would check every builtin package
+          if [ -z "${pkgs}" ]; then
+            echo "::error::No packages found in the ukri_bench repository"
+            exit 1
+          fi
+          echo "PKGS=${pkgs}" >> "${GITHUB_ENV}"
 
       - name: Audit
         run: |

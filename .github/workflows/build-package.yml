@@ -1,5 +1,5 @@
 # Reusable workflow: build one package from this repository with the latest
-# Spack release and the latest spack-packages (builtin) commit.
+# Spack release and a pinned spack-packages (builtin) commit.
 #
 # Dependencies are installed from a Spack build cache kept in the GitHub
 # Actions cache; the package itself is always built from source.
@@ -28,6 +28,11 @@ on:
 permissions:
   contents: read
 
+env:
+  # spack-packages (builtin repo) commit to build against. Update deliberately:
+  #   git ls-remote https://github.com/spack/spack-packages.git refs/heads/develop
+  SPACK_PACKAGES_COMMIT: 731577eee0004659abb29a12e42d4c52a48e7285 # develop, 2026-11-22
+
 jobs:
   build:
     name: ${{ inputs.spec }}
@@ -36,17 +41,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Resolve latest Spack release and spack-packages commit
+      - name: Resolve latest Spack release
         id: versions
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           spack_tag=$(gh release view --repo spack/spack --json tagName --jq .tagName)
-          packages_sha=$(git ls-remote https://github.com/spack/spack-packages.git refs/heads/develop | cut -f1)
-          if [ -z "${spack_tag}" ] || [ -z "${packages_sha}" ]; then
-            echo "Failed to resolve Spack versions" >&2
+          if [ -z "${spack_tag}" ]; then
+            echo "Failed to resolve the latest Spack release" >&2
             exit 1
           fi
+          packages_sha="${SPACK_PACKAGES_COMMIT}"
           echo "spack-tag=${spack_tag}" >> "${GITHUB_OUTPUT}"
           echo "packages-sha=${packages_sha}" >> "${GITHUB_OUTPUT}"
           {

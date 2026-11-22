@@ -47,9 +47,10 @@ Python style is checked with [ruff](https://docs.astral.sh/ruff/)
   against a pinned Spack release.
 - [`build-bench-dolfinx.yml`](.github/workflows/build-bench-dolfinx.yml) and
   [`build-nemo.yml`](.github/workflows/build-nemo.yml): build each package
-  with the latest Spack release and the latest
-  [spack-packages](https://github.com/spack/spack-packages) commit, then run a
-  smoke test. They run on changes to the package, weekly, and on demand.
-  Dependencies come from a Spack build cache stored in the GitHub Actions
+  with the latest Spack release and a pinned
+  [spack-packages](https://github.com/spack/spack-packages) commit
+  (`SPACK_PACKAGES_COMMIT` in `build-package.yml`), then run a smoke test.
+  They run on changes to the package, weekly (to pick up new Spack
+  releases), and on demand. Dependencies come from a Spack build cache stored in the GitHub Actions
   cache; the package itself is always built from source. The shared logic is
   in [`build-package.yml`](.github/workflows/build-package.yml).

@@ -11,7 +11,7 @@ on:
   pull_request:
     paths: *paths
   schedule:
-    # Weekly, to catch breakage from new Spack and spack-packages versions
+    # Weekly, to catch breakage from new Spack releases
     - cron: "0 3 * * 1"
   workflow_dispatch:
 

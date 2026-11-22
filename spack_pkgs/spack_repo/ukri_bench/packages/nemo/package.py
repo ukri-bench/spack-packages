@@ -122,8 +122,9 @@ class Nemo(Package):
 
     # --- Dependencies ---
     depends_on("gmake", type="build")
-    # makenemo uses the Perl-based FCM build system
+    # makenemo uses the Perl-based FCM build system; `fcm build` needs the URI module
     depends_on("perl", type="build")
+    depends_on("perl-uri", type="build")
     # NEMO segfaults without MPI even if we aren't using it
     depends_on("mpi")
     depends_on("hdf5 +shared +fortran +mpi")

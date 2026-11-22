@@ -26,6 +26,12 @@ jobs:
 
   spack:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Builtin package repo: the snapshot pinned by the Spack release, and develop
+        builtin: [release, develop]
+    name: spack (builtin ${{ matrix.builtin }})
     env:
       SPACK_VERSION: v1.2.2
     steps:
@@ -35,6 +41,9 @@ jobs:
       - name: Add package repository
         run: |
           . "${RUNNER_TEMP}/spack/share/spack/setup-env.sh"
+          if [ "${{ matrix.builtin }}" = develop ]; then
+            spack config add repos:builtin:branch:develop
+          fi
           spack repo add "${GITHUB_WORKSPACE}/spack_pkgs/spack_repo/ukri_bench"
           spack repo list
       - name: Audit packages

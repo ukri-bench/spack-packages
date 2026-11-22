@@ -63,7 +63,7 @@ class Nemo(Package):
         "reproducible",
         default=False,
         description="Disable optimisations to generate reproducible results on CPU and GPU",
-        when="%nvhpc",
+        when="%fortran=nvhpc",
     )
     variant(
         "config",
@@ -238,7 +238,7 @@ class Nemo(Package):
             arch_extra = "bld::tool::fc_modsearch -J"
 
         if spec.satisfies("+omp~omp_offload"):
-            openmp_flag = self.compiler.openmp_flag
+            openmp_flag = spec["fortran"].package.openmp_flag
             fflags += f" {openmp_flag}"
             ldflags += f" {openmp_flag}"
         elif spec.satisfies("+omp+omp_offload"):
@@ -254,7 +254,7 @@ class Nemo(Package):
         if spec.satisfies("+xios"):
             xiosdir = spec["xios"].prefix
             xios_inc = "-I%XIOS_HOME/inc"
-            xios_lib = "-L%XIOS_HOME/lib -lxios -lstdc++"
+            xios_lib = f"{spec['xios'].libs.ld_flags} -lstdc++"
 
         # Link deps are RPATHed by Spack's compiler wrapper (used via the MPI wrappers)
         ncdf_lib = (

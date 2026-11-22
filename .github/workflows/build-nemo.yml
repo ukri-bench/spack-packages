@@ -31,5 +31,6 @@ jobs:
       package: nemo
       smoke-test: |
         test -e "${PREFIX}/EXP00/nemo.exe"
-        ! ldd "${PREFIX}/EXP00/nemo.exe" | grep "not found"
+        # `! cmd` is ignored by `set -e`, so test explicitly
+        if ldd "${PREFIX}/EXP00/nemo.exe" | grep "not found"; then exit 1; fi
         "${PREFIX}/bin/nemo-wrapper" --help

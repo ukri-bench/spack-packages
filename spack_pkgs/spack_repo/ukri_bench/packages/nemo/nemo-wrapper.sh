@@ -60,6 +60,11 @@ fi
 
 while [[ "$#" -gt 0 ]]; do
   case "$1" in
+    -d|--dir|-i|--lon|-j|--lat|-t|--timesteps|-n|--namelist|--extra-paths)
+      [[ "$#" -ge 2 ]] || usage_error "Option $1 requires a value"
+      ;;
+  esac
+  case "$1" in
     -d|--dir)
       RUN_DIR="$2"
       shift 2
@@ -139,6 +144,7 @@ fi
 if [[ -n "${EXTRA_PATHS}" ]]; then
   IFS=':' read -ra extra_paths <<< "${EXTRA_PATHS}"
   for p in "${extra_paths[@]}"; do
+    [[ -n "${p}" ]] || continue
     find "$(realpath "${p}")" -type f -exec ln -s {} "${RUN_DIR}" \;
   done
 fi

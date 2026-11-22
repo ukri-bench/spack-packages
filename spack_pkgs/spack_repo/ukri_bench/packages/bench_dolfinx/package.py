@@ -17,6 +17,11 @@ class BenchDolfinx(CMakePackage, CudaPackage, ROCmPackage):
 
     version("main", branch="main", no_cache=True)
 
+    conflicts("+cuda", when="+rocm", msg="Cannot build for both ROCm and CUDA.")
+    # The benchmark CMake treats an unset GPU arch as a CPU-only build
+    conflicts("cuda_arch=none", when="+cuda", msg="A CUDA architecture must be specified.")
+    conflicts("amdgpu_target=none", when="+rocm", msg="An AMD GPU target must be specified.")
+
     depends_on("c", type="build")
     depends_on("cxx", type="build")
 
@@ -29,11 +34,6 @@ class BenchDolfinx(CMakePackage, CudaPackage, ROCmPackage):
     # Not used directly; selects 64-bit Scotch for DOLFINx graph partitioning
     depends_on("scotch +int64")
     depends_on("mpi")
-
-    conflicts("+cuda", when="+rocm", msg="Cannot build for both ROCm and CUDA.")
-    # The benchmark CMake treats an unset GPU arch as a CPU-only build
-    conflicts("cuda_arch=none", when="+cuda", msg="A CUDA architecture must be specified.")
-    conflicts("amdgpu_target=none", when="+rocm", msg="An AMD GPU target must be specified.")
 
     with when("+rocm"):
         depends_on("rocm-core")

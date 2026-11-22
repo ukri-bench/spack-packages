@@ -20,12 +20,9 @@ spack_pkgs/spack_repo/ukri_bench/
 .github/
   spack/ci-env.yaml                # Spack environment template for build workflows
   spack/versions.env               # Spack release and spack-packages commit (all workflows)
-  workflows/ci.yml                 # ruff, actionlint, spack audit/spec/expected failures
-  actionlint.yaml                  # actionlint config (newer runner labels)
+  workflows/ci.yml                 # ruff + spack audit/spec
   workflows/build-package.yml      # reusable: build one package
   workflows/build-<pkg>.yml        # per-package callers
-  scripts/check-tags.py            # version tag -> commit check (ci.yml)
-  scripts/repo-packages.py         # packages to audit: this repo's, minus builtin overrides
 ```
 
 Package directories use underscores (`bench_dolfinx`); package names use
@@ -60,7 +57,6 @@ Run locally before pushing:
 ```console
 ruff check .
 ruff format --check .
-actionlint          # workflows; needs shellcheck on PATH for run: scripts
 ```
 
 `ruff.toml` sets line length 99 and allows Spack's star import.
@@ -70,7 +66,6 @@ With Spack available:
 ```console
 spack repo add spack_pkgs/spack_repo/ukri_bench
 spack audit packages bench-dolfinx nemo
-spack python .github/scripts/check-tags.py bench-dolfinx nemo
 spack spec bench-dolfinx
 spack spec nemo +openmp
 ```
@@ -79,24 +74,9 @@ There is no local test suite; CI is the integration test.
 
 ## CI
 
-- `ci.yml`:
-  - ruff, and actionlint (with shellcheck) on the workflows.
-    `.github/actionlint.yaml` lists runner labels newer than the pinned
-    actionlint.
-  - In an `ubuntu:26.04` container, like the builds: `spack audit configs`,
-    `packages` and `packages-https` for the packages written in this
-    repository (`.github/scripts/repo-packages.py`; overrides of builtin
-    packages such as `fenics-dolfinx` are left out), and
-    `.github/scripts/check-tags.py` (each `tag=` still points at its
-    `commit=`).
-  - Concretizes a list of specs in one environment made from
-    `.github/spack/ci-env.yaml` with `unify: false`, so each is solved as the
-    build workflows would, in parallel.
-  - `expect_fail` checks, also in parallel, that `conflicts()`/`requires()`
-    reject unsupported specs with the expected message.
-
-  When adding a variant, conflict or GPU spec, add a matching entry to the
-  spec list or an `expect_fail` line.
+- `ci.yml`: ruff, then `spack audit` and `spack spec` for several variants,
+  plus a few specs that must be rejected, against the pinned spack-packages
+  commit.
 - `build-bench-dolfinx.yml`, `build-nemo.yml`: build the package in an
   `ubuntu:26.04` container and run a smoke test. Dependencies are taken from
   and pushed to the Spack OCI build cache

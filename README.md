@@ -93,12 +93,13 @@ add a package.
 Python style is checked with [ruff](https://docs.astral.sh/ruff/)
 (`ruff check .` and `ruff format --check .`). GitHub Actions workflows:
 
-- [`ci.yml`](.github/workflows/ci.yml): ruff; `spack audit` (configs, packages,
-  https) of the packages written in this repository (not `fenics-dolfinx`,
-  which is the builtin package plus a patch); a check that each version's git
-  tag still points at its pinned commit; `spack spec` for several variants of
-  each package; and checks that unsupported combinations fail to concretize.
-  All against the pinned spack-packages commit.
+- [`ci.yml`](.github/workflows/ci.yml): ruff and actionlint; `spack audit`
+  (configs, packages, https) of the packages written in this repository (not
+  `fenics-dolfinx`, which is the builtin package plus a patch); a check that
+  each version's git tag still points at its pinned commit; concretization of
+  several variants of each package with the build workflows' settings; and
+  checks that unsupported combinations fail to concretize. All against the
+  pinned spack-packages commit.
 - [`build-bench-dolfinx.yml`](.github/workflows/build-bench-dolfinx.yml) and
   [`build-nemo.yml`](.github/workflows/build-nemo.yml): build each package in
   an `ubuntu:26.04` container (target `x86_64_v3`) with a pinned Spack release

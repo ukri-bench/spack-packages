@@ -30,18 +30,43 @@ jobs:
       - name: Check formatting
         run: ruff format --check .
 
-  spack:
+  actionlint:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Check workflows
+        # actionlint also runs shellcheck (preinstalled on the runner) on run: scripts
+        run: |
+          bash <(curl -fsSL https://raw.githubusercontent.com/rhysd/actionlint/v1.7.12/scripts/download-actionlint.bash) 1.7.12
+          ./actionlint -color
+
+  spack:
+    runs-on: ubuntu-26.04
+    # Same image as the build workflows, so specs concretize with the same
+    # compilers (e.g. gcc 15 selects CUDA 13)
+    container: ubuntu:26.04
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Install Spack requirements
+        run: |
+          apt-get -y update
+          apt-get install -y --no-install-recommends file bzip2 ca-certificates g++ gcc gfortran git gzip \
+            lsb-release patch python3 tar unzip xz-utils zstd
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
       - name: Load Spack versions
         run: grep -E '^[A-Z_]+=' .github/spack/versions.env >> "${GITHUB_ENV}"
+
       - name: Set up Spack
         uses: spack/setup-spack@16b756799ede8b28951287f89bcd3fdb32ec1ca3 # v3.0.0
         with:
           spack_ref: ${{ env.SPACK_VERSION }}
           packages_ref: ${{ env.SPACK_PACKAGES_COMMIT }}
           buildcache: false
+
       - name: Add package repository
         run: |
           spack repo add "${GITHUB_WORKSPACE}/spack_pkgs/spack_repo/ukri_bench"
@@ -56,59 +81,80 @@ jobs:
 
       - name: Audit
         run: |
+          read -ra pkgs <<< "${PKGS}"
           spack audit configs
-          spack audit packages ${PKGS}
-          spack audit packages-https ${PKGS}
+          spack audit packages "${pkgs[@]}"
+          spack audit packages-https "${pkgs[@]}"
 
       - name: Check version tags
         # Only the default versions are fetched by the build workflows
-        run: spack python .github/scripts/check-tags.py ${PKGS}
+        run: |
+          read -ra pkgs <<< "${PKGS}"
+          spack python .github/scripts/check-tags.py "${pkgs[@]}"
+
+      - name: Create Spack environment
+        run: |
+          # The build workflows' environment, with each spec solved separately
+          spack env create ci .github/spack/ci-env.yaml
+          spack -e ci config add concretizer:unify:false
+          # Concretizing does not need the build cache
+          spack -e ci mirror remove ukri-bench-buildcache
 
       - name: Concretize
         run: |
-          set -x
-          spack spec bench-dolfinx
-          spack spec bench-dolfinx@main
-          # GPU specs: keep in sync with build-bench-dolfinx.yml
-          spack spec bench-dolfinx +cuda cuda_arch=90
-          spack spec bench-dolfinx +rocm amdgpu_target=gfx90a
-          spack spec bench-dolfinx@main +cuda cuda_arch=90
-          spack spec bench-dolfinx@main +rocm amdgpu_target=gfx90a
-          spack spec nemo
-          spack spec nemo config=BENCH +ice +pisces
-          spack spec nemo ~mpi
-          spack spec nemo +openmp
-          spack spec nemo +openmp +openmp_offload openmp_flags=-fopenmp
+          specs=(
+            "bench-dolfinx"
+            "bench-dolfinx@main"
+            # GPU specs: keep in sync with build-bench-dolfinx.yml
+            "bench-dolfinx +cuda cuda_arch=90"
+            "bench-dolfinx +rocm amdgpu_target=gfx90a"
+            "bench-dolfinx@main +cuda cuda_arch=90"
+            "bench-dolfinx@main +rocm amdgpu_target=gfx90a"
+            "nemo"
+            "nemo config=BENCH +ice +pisces"
+            "nemo ~mpi"
+            "nemo +openmp"
+            "nemo +openmp +openmp_offload openmp_flags=-fopenmp"
+          )
+          for spec in "${specs[@]}"; do
+            spack -e ci add "${spec}"
+          done
+          # unify:false: the specs are solved independently, in parallel
+          spack -e ci concretize -j "$(nproc)"
 
       - name: Check unsupported specs are rejected
         run: |
-          # expect_fail <pattern> <spec>: the spec must fail to concretize with an
-          # error matching the extended regex <pattern>
+          # expect_fail <pattern> <spec...>: the spec must fail to concretize, with
+          # an error matching the extended regex <pattern>
           expect_fail() {
-            pattern=$1
+            local pattern=$1 out
             shift
-            if out=$(spack spec "$@" 2>&1); then
-              echo "::error::spack spec $* concretized but should have failed"
+            if out=$(spack -e ci spec "$@" 2>&1); then
+              printf '::error::spack spec %s concretized but should have failed\n' "$*"
               return 1
             fi
             if ! grep -Eq "${pattern}" <<< "${out}"; then
-              echo "${out}"
-              echo "::error::spack spec $* failed for an unexpected reason"
+              printf '%s\n::error::spack spec %s failed for an unexpected reason\n' "${out}" "$*"
               return 1
             fi
             echo "ok: $* is rejected"
           }
-          rc=0
+          # Run the checks in parallel
+          pids=()
           # Spack does not always report the conflict message for these
           expect_fail "both ROCm and CUDA|unsatisfiable" \
-            bench-dolfinx +cuda +rocm cuda_arch=90 amdgpu_target=gfx90a || rc=1
+            bench-dolfinx +cuda +rocm cuda_arch=90 amdgpu_target=gfx90a & pids+=($!)
           expect_fail "CUDA architecture must be specified|unsatisfiable" \
-            bench-dolfinx +cuda || rc=1
+            bench-dolfinx +cuda & pids+=($!)
           expect_fail "AMD GPU target must be specified|unsatisfiable" \
-            bench-dolfinx +rocm || rc=1
-          expect_fail "XIOS spack package is currently broken" nemo +xios || rc=1
-          expect_fail "openmp_flags must be set" nemo +openmp +openmp_offload || rc=1
-          expect_fail "generic_config must be set" nemo config=GENERIC || rc=1
+            bench-dolfinx +rocm & pids+=($!)
+          expect_fail "XIOS spack package is currently broken" nemo +xios & pids+=($!)
+          expect_fail "openmp_flags must be set" nemo +openmp +openmp_offload & pids+=($!)
+          expect_fail "generic_config must be set" nemo config=GENERIC & pids+=($!)
           expect_fail "does not support PISCES" \
-            nemo config=GOSI10p0.0_like_eORCA1 +pisces || rc=1
+            nemo config=GOSI10p0.0_like_eORCA1 +pisces & pids+=($!)
+          rc=0
+          for pid in "${pids[@]}"; do
+            wait "${pid}" || rc=1
+          done
           exit "${rc}"

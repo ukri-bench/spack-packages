@@ -22,7 +22,9 @@ class Nemo(Package):
 
     maintainers("addy419")
 
-    version("5.0", commit="bc25452d80459627cb1d1ee9e6a128d7932d6e1b")
+    version("5.0.2", tag="5.0.2", commit="dcc7fb8c1779fa8409e41e4ce3ab7d45b9ceb796")
+    version("5.0.1", tag="5.0.1", commit="6f645ba8c1d97fb6c73c4deb3760148f5c5d1b9d")
+    version("5.0", tag="5.0", commit="d6c9fd7692b7bc054875bd8d267ab4ac53d2d83c")
 
     phases = ("configure", "build", "install")
 

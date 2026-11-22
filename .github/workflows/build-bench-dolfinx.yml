@@ -46,8 +46,9 @@ jobs:
       matrix:
         spec:
           # CUDA resolves to 13.x (gcc 15 conflicts with cuda@:12.9); builtin
-          # fenics-basix@0.10 applies the mdspan patch CUDA 13 needs
-          - bench-dolfinx +cuda cuda_arch=90
+          # fenics-basix@0.10 applies the mdspan patch CUDA 13 needs.
+          # The CUDA runfile installer needs libxml2.so.2.
+          - bench-dolfinx +cuda cuda_arch=90 ^cuda %libxml2@:2.13 +shared
           - bench-dolfinx +rocm amdgpu_target=gfx90a
     permissions:
       contents: read

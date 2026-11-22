@@ -57,7 +57,7 @@ jobs:
           set -x
           spack spec bench-dolfinx
           # GPU specs: keep in sync with build-bench-dolfinx.yml
-          spack spec bench-dolfinx +cuda cuda_arch=90
+          spack spec 'bench-dolfinx +cuda cuda_arch=90 ^cuda %libxml2@:2.13 +shared'
           spack spec bench-dolfinx +rocm amdgpu_target=gfx90a
           spack spec nemo
           spack spec nemo config=BENCH +ice +pisces

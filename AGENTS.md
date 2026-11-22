@@ -79,8 +79,9 @@ There is no local test suite; CI is the integration test.
   `ubuntu:26.04` container and run a smoke test. Dependencies are taken from
   and pushed to the Spack OCI build cache
   `ghcr.io/ukri-bench/spack-packages-buildcache`; the package itself is always
-  built from source. Dependencies are pushed before the package build, so a
-  failed build still warms the cache.
+  built from source. Dependencies built from source are pushed as soon as each
+  is installed (Spack autopush), and the cache index is updated even when the
+  job fails or is cancelled, so partial progress is kept. Fork PRs only read.
 - Version pins: the Spack release (`SPACK_VERSION`) and spack-packages commit
   (`SPACK_PACKAGES_COMMIT`) are set in `build-package.yml` and must be kept in
   sync with `ci.yml`. Bump them deliberately: a new spack-packages commit

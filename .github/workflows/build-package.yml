@@ -1,8 +1,10 @@
 # Reusable workflow: build one package from this repository.
 #
 # Dependencies are taken from, and pushed to, a Spack OCI build cache on the
-# GitHub Container Registry (see .github/spack/ci-env.yaml). The package itself
-# is always built from source and is never pushed.
+# GitHub Container Registry (see .github/spack/ci-env.yaml). Each dependency
+# built from source is pushed as soon as it is installed (autopush), so work is
+# kept even if the job later fails, times out or is cancelled. The package
+# itself is always built from source and is never pushed.
 
 name: Build package
 
@@ -49,6 +51,12 @@ jobs:
     permissions:
       contents: read
       packages: write
+    env:
+      # Pull requests from forks get a read-only GITHUB_TOKEN; they still read
+      # from the cache but do not push to it
+      CAN_PUSH: >-
+        ${{ github.event_name != 'pull_request'
+        || github.event.pull_request.head.repo.full_name == github.repository }}
     steps:
       - name: Install Spack requirements
         run: |
@@ -76,6 +84,7 @@ jobs:
           } >> "${GITHUB_STEP_SUMMARY}"
 
       - name: Concretize
+        id: concretize
         env:
           SPEC: ${{ inputs.spec || inputs.package }}
         run: |
@@ -83,22 +92,21 @@ jobs:
           spack -e ci add "${SPEC}"
           spack -e ci concretize -j "$(nproc)"
 
-      - name: Install dependencies
-        run: spack -e ci install -j "$(nproc)" --only dependencies --use-buildcache auto --fail-fast
+      # Autopush uploads each package built from source right after it is
+      # installed; packages installed from the cache are not pushed again
+      - name: Enable build cache autopush
+        if: env.CAN_PUSH == 'true'
+        run: spack -e ci mirror set --autopush ukri-bench-buildcache
 
-      # Pushed before the package is built so dependencies are cached even if
-      # the package build fails. Skipped for pull requests from forks, whose
-      # GITHUB_TOKEN is read-only; their builds still read from the cache.
-      - name: Push dependencies to build cache
-        if: >-
-          ${{ !cancelled() && (github.event_name != 'pull_request'
-          || github.event.pull_request.head.repo.full_name == github.repository) }}
-        run: |
-          spack -e ci buildcache push --base-image ubuntu:26.04 --only dependencies \
-            --with-build-dependencies --allow-missing --update-index ukri-bench-buildcache
+      # No --fail-fast: if one dependency fails, independent ones are still
+      # built (and pushed)
+      - name: Install dependencies
+        run: spack -e ci install -j "$(nproc)" --only dependencies --use-buildcache auto
 
       - name: Build ${{ inputs.package }}
         run: |
+          # The package itself is not cached
+          spack -e ci mirror set --no-autopush ukri-bench-buildcache
           spack -e ci install -j "$(nproc)" --use-buildcache package:never,dependencies:only --fail-fast
           spack -e ci find -lv
 
@@ -112,6 +120,12 @@ jobs:
           PREFIX=$(spack -e ci location -i "${PACKAGE}")
           export PREFIX
           bash -euo pipefail -c "${SMOKE_TEST}"
+
+      # Runs even after a failure or cancellation, so dependencies pushed so far
+      # are listed in the index
+      - name: Update build cache index
+        if: always() && env.CAN_PUSH == 'true' && steps.concretize.outcome == 'success'
+        run: spack -e ci buildcache update-index ukri-bench-buildcache
 
       - name: Upload build logs
         if: failure()

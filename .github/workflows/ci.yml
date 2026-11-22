@@ -56,6 +56,7 @@ jobs:
           spack audit packages bench-dolfinx nemo
           set -x
           spack spec bench-dolfinx
+          # GPU specs: keep in sync with build-bench-dolfinx.yml
           spack spec bench-dolfinx +cuda cuda_arch=90
           spack spec bench-dolfinx +rocm amdgpu_target=gfx90a
           spack spec nemo

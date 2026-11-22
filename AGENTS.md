@@ -8,14 +8,14 @@ A [Spack](https://spack.io) package repository, namespace `ukri_bench`, for
 the UKRI Living Benchmarks. It targets Spack v1.x and Package API v2.0
 (`spack_pkgs/spack_repo/ukri_bench/repo.yaml`).
 
-```
+```text
 spack-repo-index.yaml              # lets `spack repo add <git url>` find the repo
 spack_pkgs/spack_repo/ukri_bench/
   repo.yaml                        # namespace and Package API version
   packages/
     bench_dolfinx/package.py       # DOLFINx benchmark (CMake; CPU/CUDA/ROCm)
     nemo/package.py                # NEMO ocean model (makenemo/FCM)
-    nemo/nemo-wrapper.sh           # run-dir wrapper; @PREFIX@/@MPI@/@XIOS@ filled at install
+    nemo/nemo-wrapper.sh           # run-dir wrapper (placeholders set at install)
 .github/
   spack/ci-env.yaml                # Spack environment template for build workflows
   workflows/ci.yml                 # ruff + spack audit/spec
@@ -75,8 +75,11 @@ There is no local test suite; CI is the integration test.
 - `ci.yml`: ruff, then `spack audit` and `spack spec` for several variants,
   against both the builtin snapshot used by the pinned Spack release and the
   pinned spack-packages commit.
-- `build-bench-dolfinx.yml`, `build-nemo.yml`: build the package in an
-  `ubuntu:26.04` container and run a smoke test. Dependencies are taken from
+- `build-bench-dolfinx.yml`, `build-nemo.yml`: call `build-package.yml`, which
+  builds the package on each OS image in its matrix, checks the installed
+  `executable`, and runs the caller's smoke test. bench-dolfinx's GPU builds
+  run after its CPU build (which caches their shared dependencies) and are
+  compile-only. Dependencies are taken from
   and pushed to the Spack OCI build cache
   `ghcr.io/ukri-bench/spack-packages-buildcache`; the package itself is always
   built from source. Dependencies built from source are pushed as soon as each
@@ -96,4 +99,5 @@ There is no local test suite; CI is the integration test.
   install layout) explicit in the PR description; downstream benchmark repos
   depend on them.
 - When adding a package, add a `build-<pkg>.yml` caller (copy an existing one;
-  update `paths`, `package` and the smoke test) and list it in `README.md`.
+  update `paths`, `package`, `executable` and the smoke test) and list it in
+  `README.md`.

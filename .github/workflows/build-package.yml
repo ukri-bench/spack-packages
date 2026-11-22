@@ -20,6 +20,13 @@ on:
         required: false
         type: string
         default: ""
+      executable:
+        description: >-
+          Executable to check after the build, relative to the install prefix:
+          it must exist and have no unresolved shared libraries.
+        required: false
+        type: string
+        default: ""
       smoke-test:
         description: >-
           Shell commands run after the build. VIEW (the environment view) and
@@ -43,10 +50,15 @@ env:
 
 jobs:
   build:
-    name: ${{ inputs.spec || inputs.package }}
+    name: ${{ inputs.spec || inputs.package }} (${{ matrix.image }})
+    strategy:
+      fail-fast: false
+      matrix:
+        # Pinned OS releases, so cached binaries match the system they run on.
+        # apt- and dnf-based images are supported (see "Install Spack requirements").
+        image: ["ubuntu:26.04", "almalinux:10.3"]
     runs-on: ubuntu-26.04
-    # Fixed base image, so cached binaries match the system they run on
-    container: ubuntu:26.04
+    container: ${{ matrix.image }}
     timeout-minutes: 360
     permissions:
       contents: read
@@ -60,12 +72,28 @@ jobs:
     steps:
       - name: Install Spack requirements
         run: |
-          apt-get -y update
-          apt-get install -y --no-install-recommends file bzip2 ca-certificates g++ gcc gfortran git gzip \
-            lsb-release patch python3 tar unzip xz-utils zstd
+          if command -v apt-get > /dev/null; then
+            apt-get -y update
+            apt-get install -y --no-install-recommends file bzip2 ca-certificates g++ gcc gfortran git gzip \
+              lsb-release patch python3 tar unzip xz-utils zstd
+          elif command -v dnf > /dev/null; then
+            dnf install -y --nodocs --setopt=install_weak_deps=False file bzip2 ca-certificates diffutils findutils \
+              gcc gcc-c++ gcc-gfortran git gzip patch python3 tar unzip which xz zstd
+          else
+            echo "Unsupported image ${{ matrix.image }}: no apt-get or dnf" >&2
+            exit 1
+          fi
 
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # Unique per spec and image; artifact names cannot contain ':', ' ', etc.
+      - name: Name build artifacts
+        id: names
+        env:
+          SPEC: ${{ inputs.spec || inputs.package }}
+          IMAGE: ${{ matrix.image }}
+        run: echo "logs=spack-build-logs-$(printf '%s-%s' "${SPEC}" "${IMAGE}" | tr -c 'A-Za-z0-9._-' '-')" >> "${GITHUB_OUTPUT}"
 
       - name: Set up Spack
         uses: spack/setup-spack@16b756799ede8b28951287f89bcd3fdb32ec1ca3 # v3.0.0
@@ -119,6 +147,16 @@ jobs:
           spack -e ci install -j "$(nproc)" --use-buildcache package:never,dependencies:only --fail-fast
           spack -e ci find -lv
 
+      - name: Check executable
+        if: inputs.executable != ''
+        env:
+          EXECUTABLE: ${{ inputs.executable }}
+          PACKAGE: ${{ inputs.package }}
+        run: |
+          exe="$(spack -e ci location -i "${PACKAGE}")/${EXECUTABLE}"
+          if [ ! -x "${exe}" ]; then echo "Missing executable ${exe}" >&2; exit 1; fi
+          if ldd "${exe}" | grep "not found"; then exit 1; fi
+
       - name: Smoke test
         if: inputs.smoke-test != ''
         env:
@@ -140,7 +178,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: spack-build-logs-${{ inputs.package }}
+          name: ${{ steps.names.outputs.logs }}
           path: |
             /opt/spack-stage/**/spack-build-out.txt
             /opt/spack-stage/**/spack-build-env*.txt

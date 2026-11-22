@@ -84,11 +84,14 @@ Python style is checked with [ruff](https://docs.astral.sh/ruff/)
   package snapshot of the pinned Spack release and the pinned spack-packages
   commit.
 - [`build-bench-dolfinx.yml`](.github/workflows/build-bench-dolfinx.yml) and
-  [`build-nemo.yml`](.github/workflows/build-nemo.yml): build each package in
-  an `ubuntu:26.04` container (target `x86_64_v3`) with a pinned Spack release
-  and [spack-packages](https://github.com/spack/spack-packages) commit (set in
-  [`build-package.yml`](.github/workflows/build-package.yml)), then run a
-  smoke test. They run on changes to the package, weekly, and on demand.
+  [`build-nemo.yml`](.github/workflows/build-nemo.yml): build each package
+  on Ubuntu and AlmaLinux (target `x86_64_v3`) with a pinned Spack release and
+  [spack-packages](https://github.com/spack/spack-packages) commit, then
+  check and smoke-test it. The OS releases and pins are set in
+  [`build-package.yml`](.github/workflows/build-package.yml). bench-dolfinx
+  is also built for CUDA and ROCm; the runners have no GPU, so those builds
+  are compile-only. The workflows run on changes to the package, weekly, and
+  on demand.
 
 Dependencies for the build workflows come from a Spack OCI build cache at
 `ghcr.io/ukri-bench/spack-packages-buildcache` (configured in

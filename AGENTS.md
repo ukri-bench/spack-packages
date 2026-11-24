@@ -21,6 +21,7 @@ spack_pkgs/spack_repo/ukri_bench/
 .github/
   spack/ci-env.yaml                # Spack environment template for build workflows
   spack/packages.yaml              # CI package requirements (target, CUDA/ROCm pins)
+  spack/concretizer.yaml           # CI concretizer settings (shared with ci.yml)
   spack/versions.env               # Spack release and spack-packages commit (all workflows)
   workflows/ci.yml                 # ruff + spack audit/spec
   workflows/build-package.yml      # reusable: build one package

@@ -34,6 +34,14 @@ on:
         required: false
         type: string
         default: ""
+      free-disk:
+        description: >-
+          Delete large preinstalled toolchains on the runner host first. Needed
+          only by builds that may compile something huge from source on a cold
+          cache (llvm-amdgpu for ROCm).
+        required: false
+        type: boolean
+        default: false
 
 env:
   # Credentials for the OCI build cache
@@ -54,9 +62,9 @@ jobs:
     runs-on: ubuntu-26.04
     container:
       image: ${{ matrix.image }}
-      # Large preinstalled toolchains on the runner host, removed in the first
-      # step to make room for big source builds (e.g. llvm-amdgpu). A disk-full
-      # runner is shut down and its log can be lost.
+      # Large preinstalled toolchains on the runner host, removed by the first
+      # step when free-disk is set, to make room for big source builds (e.g.
+      # llvm-amdgpu). A disk-full runner is shut down and its log can be lost.
       volumes:
         - /usr/local/lib/android:/host/android
         - /usr/share/dotnet:/host/dotnet
@@ -75,6 +83,7 @@ jobs:
         || github.event.pull_request.head.repo.full_name == github.repository }}
     steps:
       - name: Free disk space
+        if: inputs.free-disk
         run: |
           df -h /
           rm -rf /host/*/* || true
@@ -140,8 +149,9 @@ jobs:
       # built (and pushed)
       - name: Install dependencies
         run: |
-          # Report disk and memory use while long builds print nothing
-          (while sleep 600; do df -h / | tail -1; grep MemAvailable /proc/meminfo; done) &
+          # Report disk and memory use while long builds print nothing. sleep
+          # must not hold the step's output open once the loop is killed.
+          (while sleep 600 > /dev/null 2>&1; do df -h / | tail -1; grep MemAvailable /proc/meminfo; done) &
           monitor=$!
           trap 'kill "${monitor}"' EXIT
           spack -e ci install -j "$(nproc)" --only dependencies --use-buildcache auto
@@ -162,8 +172,9 @@ jobs:
           spack -e ci mirror set --no-autopush ukri-bench-buildcache
           spack -e ci install -j "$(nproc)" --use-buildcache package:never,dependencies:only --fail-fast
           spack -e ci find -lv
-          # For the checks below
-          echo "PREFIX=$(spack -e ci location -i "${PACKAGE}")" >> "${GITHUB_ENV}"
+          # For the checks below (assigned first, so a failure stops the step)
+          prefix=$(spack -e ci location -i "${PACKAGE}")
+          echo "PREFIX=${prefix}" >> "${GITHUB_ENV}"
           echo "VIEW=/opt/view" >> "${GITHUB_ENV}"
 
       - name: Check executable

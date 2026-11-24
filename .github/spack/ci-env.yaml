@@ -2,6 +2,7 @@
 # Specs are added by .github/workflows/build-package.yml.
 spack:
   include:
+    - concretizer.yaml
     - packages.yaml
   view: /opt/view
   config:
@@ -11,10 +12,6 @@ spack:
       padded_length: 128
     build_stage:
       - /opt/spack-stage
-
-  concretizer:
-    unify: true
-    reuse: false
 
   mirrors:
     ukri-bench-buildcache:

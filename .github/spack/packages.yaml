@@ -1,7 +1,7 @@
-# Package requirements for CI: included by ci-env.yaml (build workflows) and
-# loaded with `spack -C .github/spack` by ci.yml, so both concretize the same
-# graphs. A package's own `require` replaces `all: require`, so each repeats
-# the target.
+# Package requirements for CI. Like concretizer.yaml, it is included by
+# ci-env.yaml (build workflows) and loaded with `spack -C .github/spack` by
+# ci.yml, so both solve with the same settings. A package's own `require`
+# replaces `all: require`, so each repeats the target.
 #
 # CUDA and ROCm are pinned to the newest versions in the pinned spack-packages
 # commit (versions.env). Bump them together with that commit.

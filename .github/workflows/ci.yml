@@ -47,7 +47,7 @@ jobs:
           spack repo add "${GITHUB_WORKSPACE}/spack_pkgs/spack_repo/ukri_bench"
           # fenics-dolfinx and mesa are builtin packages plus a patch; audit only our own
           spack audit packages bench-dolfinx nemo
-          # Concretize with the build workflows' package requirements
+          # Concretize with the build workflows' concretizer settings and package requirements
           spec() { spack -C .github/spack spec "$@"; }
           set -x
           spec bench-dolfinx

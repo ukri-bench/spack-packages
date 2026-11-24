@@ -66,3 +66,5 @@ jobs:
       package: bench-dolfinx
       spec: ${{ matrix.spec }}
       executable: bin/bench_dolfinx
+      # A cold cache builds llvm-amdgpu from source, which fills the runner's disk
+      free-disk: ${{ contains(matrix.spec, '+rocm') }}

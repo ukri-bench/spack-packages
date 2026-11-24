@@ -1,0 +1,8 @@
+# Concretizer settings for CI: included by ci-env.yaml (build workflows) and
+# loaded with `spack -C .github/spack` by ci.yml.
+concretizer:
+  # One consistent graph for all specs in the environment
+  unify: true
+  # Solve from scratch rather than reusing installed or cached specs, so the
+  # graph depends only on the pinned Spack and spack-packages
+  reuse: false

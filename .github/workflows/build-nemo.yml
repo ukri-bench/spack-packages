@@ -29,10 +29,6 @@ jobs:
     uses: ./.github/workflows/build-package.yml
     with:
       package: nemo
-      smoke-test: |
-        # makenemo links EXP00/nemo -> BLD/bin/nemo.exe
-        nemo="${PREFIX}/EXP00/nemo"
-        if [[ ! -x "${nemo}" ]]; then echo "Missing executable ${nemo}" >&2; exit 1; fi
-        # `! cmd` is ignored by `set -e`, so test explicitly
-        if ldd "${nemo}" | grep "not found"; then exit 1; fi
-        "${PREFIX}/bin/nemo-wrapper" --help
+      # makenemo links EXP00/nemo -> BLD/bin/nemo.exe
+      executable: EXP00/nemo
+      smoke-test: '"${PREFIX}/bin/nemo-wrapper" --help'

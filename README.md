@@ -18,6 +18,10 @@ UKRI Living Benchmarks.
   0.11, without which nvcc 13 aborts with an internal error on the header
   `dolfinx/mesh/EntityMap.h`. It overrides the builtin package while this
   repository is added.
+- `mesa`: the builtin package with the upstream patch that lets Mesa 24.3/25.0
+  build against glibc 2.43 (e.g. Ubuntu 26.04), which declares the C23
+  `call_once` in `<stdlib.h>`. Needed by ROCm builds (`hip` depends on
+  `gl`). It overrides the builtin package while this repository is added.
 - `nemo`: the [NEMO](https://www.nemo-ocean.eu/) ocean model (5.0.2 by
   default; also 5.0.1 and 5.0), with optional PSyclone OpenMP CPU/GPU
   transformations. The source configuration is selected with `config=`.
@@ -97,11 +101,16 @@ Python style is checked with [ruff](https://docs.astral.sh/ruff/)
   `spack spec` for several variants of each package, against the pinned
   spack-packages commit.
 - [`build-bench-dolfinx.yml`](.github/workflows/build-bench-dolfinx.yml) and
-  [`build-nemo.yml`](.github/workflows/build-nemo.yml): build each package in
-  an `ubuntu:26.04` container (target `x86_64_v3`) with a pinned Spack release
-  and [spack-packages](https://github.com/spack/spack-packages) commit (set in
-  [`.github/spack/versions.env`](.github/spack/versions.env)), then run a
-  smoke test. They run on changes to the package, weekly, and on demand.
+  [`build-nemo.yml`](.github/workflows/build-nemo.yml): build each package
+  on Ubuntu and AlmaLinux (target `x86_64_v3`) with a pinned Spack release and
+  [spack-packages](https://github.com/spack/spack-packages) commit, then
+  check and smoke-test it. The OS releases are set in
+  [`build-package.yml`](.github/workflows/build-package.yml) and the pins in
+  [`.github/spack/versions.env`](.github/spack/versions.env). bench-dolfinx
+  is also built for CUDA and ROCm, at the versions pinned in
+  [`.github/spack/packages.yaml`](.github/spack/packages.yaml); the runners
+  have no GPU, so those builds are compile-only. The workflows run on changes to the package, weekly, and
+  on demand.
 
 Dependencies for the build workflows come from a Spack OCI build cache at
 `ghcr.io/ukri-bench/spack-packages-buildcache` (configured in

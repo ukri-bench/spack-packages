@@ -20,6 +20,13 @@ on:
         required: false
         type: string
         default: ""
+      executable:
+        description: >-
+          Executable to check after the build, relative to the install prefix:
+          it must exist and have no unresolved shared libraries.
+        required: false
+        type: string
+        default: ""
       smoke-test:
         description: >-
           Shell commands run after the build. VIEW (the environment view) and
@@ -27,6 +34,14 @@ on:
         required: false
         type: string
         default: ""
+      free-disk:
+        description: >-
+          Delete large preinstalled toolchains on the runner host first. Needed
+          only by builds that may compile something huge from source on a cold
+          cache (llvm-amdgpu for ROCm).
+        required: false
+        type: boolean
+        default: false
 
 env:
   # Credentials for the OCI build cache
@@ -37,10 +52,25 @@ env:
 
 jobs:
   build:
-    name: ${{ inputs.spec || inputs.package }}
+    name: ${{ inputs.spec || inputs.package }} (${{ matrix.image }})
+    strategy:
+      fail-fast: false
+      matrix:
+        # Pinned OS releases, so cached binaries match the system they run on.
+        # apt- and dnf-based images are supported (see "Install Spack requirements").
+        image: ["ubuntu:26.04", "almalinux:10.3"]
     runs-on: ubuntu-26.04
-    # Fixed base image, so cached binaries match the system they run on
-    container: ubuntu:26.04
+    container:
+      image: ${{ matrix.image }}
+      # Large preinstalled toolchains on the runner host, removed by the first
+      # step when free-disk is set, to make room for big source builds (e.g.
+      # llvm-amdgpu). A disk-full runner is shut down and its log can be lost.
+      volumes:
+        - /usr/local/lib/android:/host/android
+        - /usr/share/dotnet:/host/dotnet
+        - /opt/ghc:/host/ghc
+        - /usr/local/.ghcup:/host/ghcup
+        - /usr/share/swift:/host/swift
     timeout-minutes: 360
     permissions:
       contents: read
@@ -52,14 +82,34 @@ jobs:
         ${{ github.event_name != 'pull_request'
         || github.event.pull_request.head.repo.full_name == github.repository }}
     steps:
+      - name: Free disk space
+        if: inputs.free-disk
+        run: |
+          df -h /
+          rm -rf /host/*/* || true
+          df -h /
+
       - name: Install Spack requirements
         run: |
-          apt-get -y update
-          apt-get install -y --no-install-recommends file bzip2 ca-certificates g++ gcc gfortran git gzip \
-            lsb-release patch python3 tar unzip xz-utils zstd
+          if command -v apt-get > /dev/null; then
+            apt-get -y update
+            apt-get install -y --no-install-recommends file bzip2 ca-certificates g++ gcc gfortran git gzip \
+              lsb-release patch python3 tar unzip xz-utils zstd
+          else
+            dnf install -y --nodocs --setopt=install_weak_deps=False file bzip2 ca-certificates diffutils findutils \
+              gcc gcc-c++ gcc-gfortran git gzip patch python3 tar unzip which xz zstd
+          fi
 
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # Unique per spec and image; artifact names cannot contain ':', ' ', etc.
+      - name: Name build artifacts
+        id: names
+        env:
+          SPEC: ${{ inputs.spec || inputs.package }}
+          IMAGE: ${{ matrix.image }}
+        run: echo "logs=spack-build-logs-$(printf '%s-%s' "${SPEC}" "${IMAGE}" | tr -c 'A-Za-z0-9._-' '-')" >> "${GITHUB_OUTPUT}"
 
       - name: Load Spack versions
         run: grep -E '^[A-Z_]+=' .github/spack/versions.env >> "${GITHUB_ENV}"
@@ -99,6 +149,11 @@ jobs:
       # built (and pushed)
       - name: Install dependencies
         run: |
+          # Report disk and memory use while long builds print nothing. sleep
+          # must not hold the step's output open once the loop is killed.
+          (while sleep 600 > /dev/null 2>&1; do df -h / | tail -1; grep MemAvailable /proc/meminfo; done) &
+          monitor=$!
+          trap 'kill "${monitor}"' EXIT
           spack -e ci install -j "$(nproc)" --only dependencies --use-buildcache auto
           # --only dependencies skips build-only dependencies of the package itself.
           # Install them here too, so they are built (and pushed) in this step and
@@ -110,22 +165,32 @@ jobs:
           fi
 
       - name: Build ${{ inputs.package }}
+        env:
+          PACKAGE: ${{ inputs.package }}
         run: |
           # The package itself is not cached
           spack -e ci mirror set --no-autopush ukri-bench-buildcache
           spack -e ci install -j "$(nproc)" --use-buildcache package:never,dependencies:only --fail-fast
           spack -e ci find -lv
+          # For the checks below (assigned first, so a failure stops the step)
+          prefix=$(spack -e ci location -i "${PACKAGE}")
+          echo "PREFIX=${prefix}" >> "${GITHUB_ENV}"
+          echo "VIEW=/opt/view" >> "${GITHUB_ENV}"
+
+      - name: Check executable
+        if: inputs.executable != ''
+        env:
+          EXECUTABLE: ${{ inputs.executable }}
+        run: |
+          exe="${PREFIX}/${EXECUTABLE}"
+          if [ ! -x "${exe}" ]; then echo "Missing executable ${exe}" >&2; exit 1; fi
+          if ldd "${exe}" | grep "not found"; then exit 1; fi
 
       - name: Smoke test
         if: inputs.smoke-test != ''
         env:
           SMOKE_TEST: ${{ inputs.smoke-test }}
-          PACKAGE: ${{ inputs.package }}
-        run: |
-          export VIEW=/opt/view
-          PREFIX=$(spack -e ci location -i "${PACKAGE}")
-          export PREFIX
-          bash -euo pipefail -c "${SMOKE_TEST}"
+        run: bash -euo pipefail -c "${SMOKE_TEST}"
 
       # Runs even after a failure or cancellation, so dependencies pushed so far
       # are listed in the index
@@ -137,7 +202,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: spack-build-logs-${{ inputs.spec || inputs.package }}
+          name: ${{ steps.names.outputs.logs }}
           path: |
             /opt/spack-stage/**/spack-build-out.txt
             /opt/spack-stage/**/spack-build-env*.txt

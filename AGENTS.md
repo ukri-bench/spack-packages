@@ -5,7 +5,7 @@ Guidance for coding agents (and humans) working in this repository.
 ## What this is
 
 A [Spack](https://spack.io) package repository, namespace `ukri_bench`, for
-the UKRI Living Benchmarks. It targets Spack v1.x and Package API v2.0
+the UKRI Living Benchmarks. It targets Spack v1.2+ and Package API v2.5
 (`spack_pkgs/spack_repo/ukri_bench/repo.yaml`).
 
 ```
@@ -33,7 +33,9 @@ hyphens (`bench-dolfinx`).
 - Header: copyright line and `# SPDX-License-Identifier: MIT` (the repository
   is MIT licensed).
 - Imports: build-system classes from `spack_repo.builtin.build_systems.*`,
-  then a blank line, then `from spack.package import *`.
+  then a blank line, then `from spack.package import *`. `Package` and
+  `GenericBuilder` come from `spack.package` (Package API v2.2+), not
+  `build_systems.generic`.
 - Class body order: docstring, `homepage`/`git`, `maintainers`, `license`,
   `version`, variants, conflicts, `depends_on`, then methods.
 - Every package declares `maintainers(...)` and `license(...)` (SPDX

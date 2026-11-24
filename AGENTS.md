@@ -36,6 +36,9 @@ hyphens (`bench-dolfinx`).
   then a blank line, then `from spack.package import *`.
 - Class body order: docstring, `homepage`/`git`, `maintainers`, `license`,
   `version`, variants, conflicts, `depends_on`, then methods.
+- Every package declares `maintainers(...)` and `license(...)` (SPDX
+  identifier of the upstream code, not of this repository). Overrides of
+  builtin packages (e.g. `fenics_dolfinx`) inherit both; do not redeclare.
 - Prefer `spec.satisfies(...)` over `"+x" in spec`, and `%fortran=gcc`-style
   checks when the language matters.
 - Libraries a package links against must be link dependencies (the default

@@ -65,7 +65,7 @@ With Spack available:
 
 ```console
 spack repo add spack_pkgs/spack_repo/ukri_bench
-spack audit packages bench-dolfinx fenics-dolfinx nemo
+spack audit packages bench-dolfinx nemo
 spack spec bench-dolfinx
 spack spec nemo +openmp
 ```
@@ -75,7 +75,8 @@ There is no local test suite; CI is the integration test.
 ## CI
 
 - `ci.yml`: ruff, then `spack audit` and `spack spec` for several variants,
-  against the pinned spack-packages commit.
+  plus a few specs that must be rejected, against the pinned spack-packages
+  commit.
 - `build-bench-dolfinx.yml`, `build-nemo.yml`: call `build-package.yml`, which
   builds the package on each OS image in its matrix, checks the installed
   `executable`, and runs the caller's smoke test. bench-dolfinx's GPU builds

@@ -6,8 +6,6 @@ import os
 import textwrap
 from pathlib import Path
 
-from spack_repo.builtin.build_systems.generic import Package
-
 from spack.package import *
 
 
@@ -21,6 +19,8 @@ class Nemo(Package):
     git = "https://forge.nemo-ocean.eu/nemo/nemo.git"
 
     maintainers("addy419")
+
+    license("CECILL-2.0")
 
     version("5.0.2", tag="5.0.2", commit="dcc7fb8c1779fa8409e41e4ce3ab7d45b9ceb796")
     version("5.0.1", tag="5.0.1", commit="6f645ba8c1d97fb6c73c4deb3760148f5c5d1b9d")
@@ -297,7 +297,8 @@ class Nemo(Package):
             f.write(arch)
 
     def build(self, spec, prefix):
-        params = ["-j", str(make_jobs), "-m", "fort"]
+        jobs = determine_number_of_jobs(parallel=self.parallel)
+        params = ["-j", str(jobs), "-m", "fort"]
 
         if self.source_cfg_dir.parent.name == "cfgs":
             params.append("-r")

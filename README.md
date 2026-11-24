@@ -35,7 +35,7 @@ UKRI Living Benchmarks.
 
 ## Usage
 
-Requires Spack v1.0 or later (Package API v2.0).
+Requires Spack v1.2 or later (Package API v2.5).
 
 `bench-dolfinx@main` needs DOLFINx 0.11, which is in the builtin packages
 ([spack-packages](https://github.com/spack/spack-packages)) from

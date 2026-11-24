@@ -45,7 +45,7 @@ jobs:
       - name: Audit and concretize
         run: |
           spack repo add "${GITHUB_WORKSPACE}/spack_pkgs/spack_repo/ukri_bench"
-          # fenics-dolfinx is the builtin package plus a patch; audit only our own
+          # fenics-dolfinx and mesa are builtin packages plus a patch; audit only our own
           spack audit packages bench-dolfinx nemo
           set -x
           spack spec bench-dolfinx

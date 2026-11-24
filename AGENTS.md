@@ -15,6 +15,7 @@ spack_pkgs/spack_repo/ukri_bench/
   packages/
     bench_dolfinx/package.py       # DOLFINx benchmark (CMake; CPU/CUDA/ROCm)
     fenics_dolfinx/package.py      # builtin fenics-dolfinx + nvcc patch for 0.11
+    mesa/package.py                # builtin mesa + glibc 2.43 (C23) patch for 25.0
     nemo/package.py                # NEMO ocean model (makenemo/FCM)
     nemo/nemo-wrapper.sh           # run-dir wrapper (placeholders set at install)
 .github/
@@ -40,7 +41,7 @@ hyphens (`bench-dolfinx`).
   `version`, variants, conflicts, `depends_on`, then methods.
 - Every package declares `maintainers(...)` and `license(...)` (SPDX
   identifier of the upstream code, not of this repository). Overrides of
-  builtin packages (e.g. `fenics_dolfinx`) inherit both; do not redeclare.
+  builtin packages (e.g. `fenics_dolfinx`, `mesa`) inherit both; do not redeclare.
 - Prefer `spec.satisfies(...)` over `"+x" in spec`, and `%fortran=gcc`-style
   checks when the language matters.
 - Libraries a package links against must be link dependencies (the default

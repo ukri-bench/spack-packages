@@ -1,0 +1,34 @@
+diff --git a/src/c11/impl/threads_posix.c b/src/c11/impl/threads_posix.c
+index 3b8692482bbe2f8ef360d6e8a7fdd8bec37f2993..6db8c42f08ce7541f1b6e58ebded1c49fa8506ab 100644
+--- a/src/c11/impl/threads_posix.c
++++ b/src/c11/impl/threads_posix.c
+@@ -46,12 +46,13 @@ impl_thrd_routine(void *p)
+ 
+ /*--------------- 7.25.2 Initialization functions ---------------*/
+ // 7.25.2.1
++#ifndef __once_flag_defined
+ void
+ call_once(once_flag *flag, void (*func)(void))
+ {
+     pthread_once(flag, func);
+ }
+-
++#endif
+ 
+ /*------------- 7.25.3 Condition variable functions -------------*/
+ // 7.25.3.1
+diff --git a/src/c11/threads.h b/src/c11/threads.h
+index dbcb3459a9b23580d40359061c901cb5905138bf..c849f385e3097d4badf5d1c82b44870c9bbcf26b 100644
+--- a/src/c11/threads.h
++++ b/src/c11/threads.h
+@@ -118,8 +118,10 @@ typedef pthread_cond_t  cnd_t;
+ typedef pthread_t       thrd_t;
+ typedef pthread_key_t   tss_t;
+ typedef pthread_mutex_t mtx_t;
++#ifndef __once_flag_defined
+ typedef pthread_once_t  once_flag;
+ #  define ONCE_FLAG_INIT PTHREAD_ONCE_INIT
++#endif
+ #  ifdef PTHREAD_DESTRUCTOR_ITERATIONS
+ #    define TSS_DTOR_ITERATIONS PTHREAD_DESTRUCTOR_ITERATIONS
+ #  else

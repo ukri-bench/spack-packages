@@ -18,6 +18,10 @@ UKRI Living Benchmarks.
   0.11, without which nvcc 13 aborts with an internal error on the header
   `dolfinx/mesh/EntityMap.h`. It overrides the builtin package while this
   repository is added.
+- `mesa`: the builtin package with the upstream patch that lets Mesa 25.0
+  build against glibc 2.43 (e.g. Ubuntu 26.04), which declares the C23
+  `call_once` in `<stdlib.h>`. Needed by ROCm builds (`hip` depends on
+  `gl`). It overrides the builtin package while this repository is added.
 - `nemo`: the [NEMO](https://www.nemo-ocean.eu/) ocean model (5.0.2 by
   default; also 5.0.1 and 5.0), with optional PSyclone OpenMP CPU/GPU
   transformations. The source configuration is selected with `config=`.

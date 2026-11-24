@@ -297,7 +297,8 @@ class Nemo(Package):
             f.write(arch)
 
     def build(self, spec, prefix):
-        params = ["-j", str(make_jobs), "-m", "fort"]
+        jobs = determine_number_of_jobs(parallel=self.parallel)
+        params = ["-j", str(jobs), "-m", "fort"]
 
         if self.source_cfg_dir.parent.name == "cfgs":
             params.append("-r")

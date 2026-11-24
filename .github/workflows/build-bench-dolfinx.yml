@@ -45,7 +45,8 @@ jobs:
 
   # Starts after the CPU build, which caches the (large) dependency stack the GPU
   # builds share. Compile-only: runners have no GPU, so only the executable check
-  # runs. Keep the specs in sync with ci.yml.
+  # runs. Keep the specs in sync with ci.yml. CUDA/ROCm versions and the build
+  # workarounds they need are set in .github/spack/packages.yaml.
   gpu:
     needs: cpu
     if: ${{ !cancelled() }}
@@ -53,13 +54,10 @@ jobs:
       fail-fast: false
       matrix:
         spec:
-          # CUDA resolves to 13.x (gcc 15 conflicts with cuda@:12.9); builtin
+          # CUDA 13 (gcc 15 conflicts with cuda@:12.9); builtin
           # fenics-basix@0.10 applies the mdspan patch CUDA 13 needs.
-          # The CUDA runfile installer needs libxml2.so.2.
-          - bench-dolfinx +cuda cuda_arch=90 ^cuda %libxml2@:2.13 +shared
-          # hip needs gl. mesa +llvm (the default) builds against the newest
-          # llvm, which mesa@25.0 does not support; softpipe is enough here.
-          - bench-dolfinx +rocm amdgpu_target=gfx90a ^mesa~llvm
+          - bench-dolfinx +cuda cuda_arch=90
+          - bench-dolfinx +rocm amdgpu_target=gfx90a
     permissions:
       contents: read
       packages: write # push to the OCI build cache

@@ -1,0 +1,41 @@
+# Package requirements for CI: included by ci-env.yaml (build workflows) and
+# loaded with `spack -C .github/spack` by ci.yml, so both concretize the same
+# graphs. A package's own `require` replaces `all: require`, so each repeats
+# the target.
+#
+# CUDA and ROCm are pinned to the newest versions in the pinned spack-packages
+# commit (versions.env). Bump them together with that commit.
+packages:
+  all:
+    # Generic target so binaries are reusable across runner CPU models
+    require:
+      - target=x86_64_v3
+  cuda:
+    require:
+      - target=x86_64_v3
+      - "@13.4.2"
+      # The CUDA runfile installer needs libxml2.so.2
+      - "%libxml2@:2.13"
+  # hip needs gl. mesa +llvm (the default) builds against the newest llvm,
+  # which mesa@25.0 does not support; softpipe is enough for compile-only CI.
+  mesa:
+    require:
+      - target=x86_64_v3
+      - "~llvm"
+  # ROCm release: every ROCm package in the bench-dolfinx +rocm graph
+  hip: &rocm
+    require:
+      - target=x86_64_v3
+      - "@10.1.0"
+  hipcc: *rocm
+  hipify-clang: *rocm
+  llvm-amdgpu: *rocm
+  hsa-rocr-dev: *rocm
+  comgr: *rocm
+  rocm-core: *rocm
+  rocm-cmake: *rocm
+  rocminfo: *rocm
+  rocprim: *rocm
+  rocthrust: *rocm
+  rocprofiler-register: *rocm
+  roctracer-dev-api: *rocm

@@ -15,11 +15,12 @@ spack_pkgs/spack_repo/ukri_bench/
   packages/
     bench_dolfinx/package.py       # DOLFINx benchmark (CMake; CPU/CUDA/ROCm)
     fenics_dolfinx/package.py      # builtin fenics-dolfinx + nvcc patch for 0.11
-    mesa/package.py                # builtin mesa + glibc 2.43 (C23) patch for 25.0
+    mesa/package.py                # builtin mesa + glibc 2.43 (C23) patch for 24.3-25.0
     nemo/package.py                # NEMO ocean model (makenemo/FCM)
     nemo/nemo-wrapper.sh           # run-dir wrapper (placeholders set at install)
 .github/
   spack/ci-env.yaml                # Spack environment template for build workflows
+  spack/packages.yaml              # CI package requirements (target, CUDA/ROCm pins)
   spack/versions.env               # Spack release and spack-packages commit (all workflows)
   workflows/ci.yml                 # ruff + spack audit/spec
   workflows/build-package.yml      # reusable: build one package
@@ -98,6 +99,8 @@ There is no local test suite; CI is the integration test.
   `ci.yml` and `build-package.yml` load that file into the job environment
   and pass the values to `spack/setup-spack`. Bump them deliberately: a new
   spack-packages commit re-solves the graph and can invalidate cached binaries.
+  CUDA and ROCm versions are pinned in `.github/spack/packages.yaml` (shared
+  by `ci.yml` and the build workflows); bump them with the commit.
 - Do not point the build cache at `ghcr.io/ukri-bench/spack-buildcache`. It
   belongs to `benchmark-dolfinx`, and this repository cannot write to it.
 - A cold cache means a long first build (dependencies from source).

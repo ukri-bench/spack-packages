@@ -18,7 +18,7 @@ UKRI Living Benchmarks.
   0.11, without which nvcc 13 aborts with an internal error on the header
   `dolfinx/mesh/EntityMap.h`. It overrides the builtin package while this
   repository is added.
-- `mesa`: the builtin package with the upstream patch that lets Mesa 25.0
+- `mesa`: the builtin package with the upstream patch that lets Mesa 24.3/25.0
   build against glibc 2.43 (e.g. Ubuntu 26.04), which declares the C23
   `call_once` in `<stdlib.h>`. Needed by ROCm builds (`hip` depends on
   `gl`). It overrides the builtin package while this repository is added.
@@ -107,8 +107,9 @@ Python style is checked with [ruff](https://docs.astral.sh/ruff/)
   check and smoke-test it. The OS releases are set in
   [`build-package.yml`](.github/workflows/build-package.yml) and the pins in
   [`.github/spack/versions.env`](.github/spack/versions.env). bench-dolfinx
-  is also built for CUDA and ROCm; the runners have no GPU, so those builds
-  are compile-only. The workflows run on changes to the package, weekly, and
+  is also built for CUDA and ROCm, at the versions pinned in
+  [`.github/spack/packages.yaml`](.github/spack/packages.yaml); the runners
+  have no GPU, so those builds are compile-only. The workflows run on changes to the package, weekly, and
   on demand.
 
 Dependencies for the build workflows come from a Spack OCI build cache at

@@ -34,8 +34,8 @@ hyphens (`bench-dolfinx`).
   is MIT licensed).
 - Imports: build-system classes from `spack_repo.builtin.build_systems.*`,
   then a blank line, then `from spack.package import *`.
-- Class body order: docstring, `homepage`/`git`, `maintainers`, `version`,
-  variants, conflicts, `depends_on`, then methods.
+- Class body order: docstring, `homepage`/`git`, `maintainers`, `license`,
+  `version`, variants, conflicts, `depends_on`, then methods.
 - Prefer `spec.satisfies(...)` over `"+x" in spec`, and `%fortran=gcc`-style
   checks when the language matters.
 - Libraries a package links against must be link dependencies (the default

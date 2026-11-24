@@ -17,6 +17,8 @@ class BenchDolfinx(CMakePackage, CudaPackage, ROCmPackage):
 
     maintainers("chrisrichardson", "garth-wells")
 
+    license("MIT")
+
     version("main", branch="main", no_cache=True)
     version("0.10.0", tag="v0.10.0", commit="2f148fdda9e40af17fdf7a936b7357350ba41600")
 

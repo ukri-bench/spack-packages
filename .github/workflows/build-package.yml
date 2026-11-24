@@ -52,7 +52,17 @@ jobs:
         # apt- and dnf-based images are supported (see "Install Spack requirements").
         image: ["ubuntu:26.04", "almalinux:10.3"]
     runs-on: ubuntu-26.04
-    container: ${{ matrix.image }}
+    container:
+      image: ${{ matrix.image }}
+      # Large preinstalled toolchains on the runner host, removed in the first
+      # step to make room for big source builds (e.g. llvm-amdgpu). A disk-full
+      # runner is shut down and its log can be lost.
+      volumes:
+        - /usr/local/lib/android:/host/android
+        - /usr/share/dotnet:/host/dotnet
+        - /opt/ghc:/host/ghc
+        - /usr/local/.ghcup:/host/ghcup
+        - /usr/share/swift:/host/swift
     timeout-minutes: 360
     permissions:
       contents: read
@@ -64,6 +74,12 @@ jobs:
         ${{ github.event_name != 'pull_request'
         || github.event.pull_request.head.repo.full_name == github.repository }}
     steps:
+      - name: Free disk space
+        run: |
+          df -h /
+          rm -rf /host/*/* || true
+          df -h /
+
       - name: Install Spack requirements
         run: |
           if command -v apt-get > /dev/null; then
@@ -127,6 +143,10 @@ jobs:
       # built (and pushed)
       - name: Install dependencies
         run: |
+          # Report disk and memory use while long builds print nothing
+          (while sleep 600; do df -h / | tail -1; grep MemAvailable /proc/meminfo; done) &
+          monitor=$!
+          trap 'kill "${monitor}"' EXIT
           spack -e ci install -j "$(nproc)" --only dependencies --use-buildcache auto
           # --only dependencies skips build-only dependencies of the package itself.
           # Install them here too, so they are built (and pushed) in this step and

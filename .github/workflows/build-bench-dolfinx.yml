@@ -56,7 +56,9 @@ jobs:
           # fenics-basix@0.10 applies the mdspan patch CUDA 13 needs.
           # The CUDA runfile installer needs libxml2.so.2.
           - bench-dolfinx +cuda cuda_arch=90 ^cuda %libxml2@:2.13 +shared
-          - bench-dolfinx +rocm amdgpu_target=gfx90a
+          # hip needs gl. mesa +llvm (the default) builds against the newest
+          # llvm, which mesa@25.0 does not support; softpipe is enough here.
+          - bench-dolfinx +rocm amdgpu_target=gfx90a ^mesa~llvm
     permissions:
       contents: read
       packages: write # push to the OCI build cache

@@ -14,6 +14,8 @@ UKRI Living Benchmarks.
   (built against DOLFINx 0.11). CPU by default; `+cuda
   cuda_arch=<arch>` or `+rocm amdgpu_target=<target>` for GPU builds (one of
   the two, with an architecture).
+- `benchmark-flamegpu`: the [FLAMEGPU benchmark](https://github.com/ukri-bench/benchmark-flamegpu).
+  Versions: `main` (built against FLAMEGPU `2.0.0-rc.6+4fa74199`). GPU only; `+cuda cuda_arch=<arch>` or `+rocm amdgpu_target=<target>` for GPU builds (one of the two, with an architecture).
 - `fenics-dolfinx`: the builtin package with one added patch for DOLFINx
   0.11, without which nvcc 13 aborts with an internal error on the header
   `dolfinx/mesh/EntityMap.h`. It overrides the builtin package while this
@@ -68,6 +70,8 @@ Then, for example:
 ```console
 spack install bench-dolfinx
 spack install bench-dolfinx +cuda cuda_arch=90
+spack install benchmark-flamegpu +cuda cuda_arch=90
+spack install benchmark-flamegpu +rocm amdgpu_target=gfx942
 spack install nemo config=BENCH
 spack install nemo +openmp %fortran=gcc
 spack install nemo +openmp +openmp_offload openmp_flags="-mp=gpu -gpu=cc90" %fortran=nvhpc
@@ -82,6 +86,7 @@ spack install nemo +openmp +openmp_offload openmp_flags="-mp=gpu -gpu=cc90" %for
   ```console
   mpiexec -n 2 bench_dolfinx --ndofs=10000 --degree=3 --nreps=10
   ```
+- `benchmark-flamegpu` installs the executable `benchmark-flamegpu` (`benchmark-flamegpu -h` lists options).
 
 - `nemo` installs the build configuration under its prefix, with the
   executable at `<prefix>/EXP00/nemo`, and a `nemo-wrapper` script that

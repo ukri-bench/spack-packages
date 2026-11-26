@@ -14,6 +14,7 @@ spack_pkgs/spack_repo/ukri_bench/
   repo.yaml                        # namespace and Package API version
   packages/
     bench_dolfinx/package.py       # DOLFINx benchmark (CMake; CPU/CUDA/ROCm)
+    benchmark_flamegpu/package.py  # FLAMEGPU benchmark (CMake; CUDA/ROCm)
     fenics_dolfinx/package.py      # builtin fenics-dolfinx + nvcc patch for 0.11
     mesa/package.py                # builtin mesa + glibc 2.43 (C23) patch for 24.3-25.0
     nemo/package.py                # NEMO ocean model (makenemo/FCM)
@@ -73,8 +74,9 @@ With Spack available:
 
 ```console
 spack repo add spack_pkgs/spack_repo/ukri_bench
-spack audit packages bench-dolfinx nemo
+spack audit packages bench-dolfinx benchmark-flamegpu nemo
 spack spec bench-dolfinx
+spack spec benchmark-flamegpu
 spack spec nemo +openmp
 ```
 

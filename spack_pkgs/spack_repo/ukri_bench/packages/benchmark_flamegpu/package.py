@@ -20,6 +20,12 @@ class BenchmarkFlamegpu(CMakePackage, CudaPackage, ROCmPackage):
     license("AGPL-3.0-only")
 
     version("main", branch="main", no_cache=True)
+    version(
+        "0.1.0",
+        tag="v0.1.0",
+        commit="f56e54656b794c826a572dd3b612f5eac65ef06a",
+        get_full_repo=True,  # needed so benchmark-flamegpu can embed the git tag
+    )
 
     variant(
         "seatbelts",

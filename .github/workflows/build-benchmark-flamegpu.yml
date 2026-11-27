@@ -1,0 +1,45 @@
+name: Build benchmark-flamegpu
+
+on:
+  push:
+    branches: [main]
+    paths: &paths
+      - spack_pkgs/spack_repo/ukri_bench/packages/benchmark_flamegpu/**
+      - spack_pkgs/spack_repo/ukri_bench/repo.yaml
+      - .github/workflows/build-package.yml
+      - .github/spack/**
+      - .github/workflows/build-benchmark-flamegpu.yml
+  pull_request:
+    paths: *paths
+  schedule:
+    # Weekly, to catch upstream breakage (e.g. source downloads)
+    - cron: "0 3 * * 1"
+  workflow_dispatch:
+
+# Cancel superseded pull request runs; pushes to main finish so they populate the cache
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  # Compile-only: runners have no GPU, so only the executable check runs
+  # Keep the specs in sync with ci.yml. CUDA/ROCm versions and the build
+  # workarounds they need are set in .github/spack/packages.yaml.
+  gpu:
+    strategy:
+      fail-fast: false
+      matrix:
+        spec:
+          # CUDA 13 (gcc 15 conflicts with cuda@:12.9); builtin
+          - benchmark-flamegpu +cuda cuda_arch=90
+          - benchmark-flamegpu +rocm amdgpu_target=gfx90a
+    permissions:
+      contents: read
+      packages: write # push to the OCI build cache
+    uses: ./.github/workflows/build-package.yml
+    with:
+      package: benchmark-flamegpu
+      spec: ${{ matrix.spec }}
+      executable: bin/benchmark-flamegpu
+      # A cold cache builds llvm-amdgpu from source, which fills the runner's disk
+      free-disk: ${{ contains(matrix.spec, '+rocm') }}

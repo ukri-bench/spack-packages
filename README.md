@@ -18,11 +18,11 @@ UKRI Living Benchmarks.
 - `bench-flamegpu`: the [FLAME GPU 2 benchmark](https://github.com/ukri-bench/benchmark-flamegpu).
   Versions: `0.1.0` (the default) and `main`. GPU only: `+cuda
   cuda_arch=<arch>` (CUDA 12.4 or later) or `+rocm amdgpu_target=<target>`
-  (ROCm 7 or later, built with the ROCm `llvm-amdgpu` C++ compiler). FLAME GPU
-  2 itself is built as part of the benchmark at the commit the benchmark pins;
-  it is not a separate package, as it has no install rules. `+seatbelts`
-  enables FLAME GPU's runtime error checks (off by default, as they slow the
-  benchmark).
+  (ROCm 7 or later; C++ is compiled with `amdclang++` from `llvm-amdgpu`).
+  FLAME GPU 2 itself is built as part of the benchmark at the commit the
+  benchmark pins; it is not a separate package, as it has no install rules.
+  `+seatbelts` enables FLAME GPU's runtime error checks (off by default, as
+  they slow the benchmark).
 - `fenics-dolfinx`: the builtin package with one added patch for DOLFINx
   0.11, without which nvcc 13 aborts with an internal error on the header
   `dolfinx/mesh/EntityMap.h`. It overrides the builtin package while this

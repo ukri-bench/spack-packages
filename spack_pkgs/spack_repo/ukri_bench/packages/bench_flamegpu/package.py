@@ -60,8 +60,10 @@ class BenchFlamegpu(CMakePackage, CudaPackage, ROCmPackage):
         depends_on("hipcub")
         depends_on("hiprand")
         depends_on("rocm-smi-lib")
-        # hip::device adds `-x hip` to every target, C++ sources included
-        requires("%cxx=llvm-amdgpu", msg="ROCm builds need the ROCm (llvm-amdgpu) C++ compiler.")
+        # hip::device adds `-x hip` to every target, C++ sources included, so C++
+        # is compiled with amdclang++ too (see cmake_args). A plain dependency, not
+        # %cxx=llvm-amdgpu: Spack cannot build a compiler in the same solve.
+        depends_on("llvm-amdgpu", type="build")
 
     resource(
         name="flamegpu2",
@@ -111,12 +113,11 @@ class BenchFlamegpu(CMakePackage, CudaPackage, ROCmPackage):
                 ),
             ]
         if spec.satisfies("+rocm"):
+            amdclang = join_path(spec["llvm-amdgpu"].prefix.bin, "amdclang++")
             args += [
                 self.define("FLAMEGPU_BACKEND", "HIP"),
                 self.define_from_variant("CMAKE_HIP_ARCHITECTURES", "amdgpu_target"),
-                self.define(
-                    "CMAKE_HIP_COMPILER",
-                    join_path(spec["llvm-amdgpu"].prefix.bin, "amdclang++"),
-                ),
+                self.define("CMAKE_HIP_COMPILER", amdclang),
+                self.define("CMAKE_CXX_COMPILER", amdclang),
             ]
         return args

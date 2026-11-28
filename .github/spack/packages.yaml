@@ -22,20 +22,25 @@ packages:
     require:
       - target=x86_64_v3
       - "~llvm"
-  # ROCm release: every ROCm package in the bench-dolfinx +rocm graph
+  # ROCm release: every ROCm package in the bench-dolfinx and bench-flamegpu
+  # +rocm graphs
   hip: &rocm
     require:
       - target=x86_64_v3
       - "@10.1.0"
   hipcc: *rocm
+  hipcub: *rocm
+  hiprand: *rocm
   hipify-clang: *rocm
   llvm-amdgpu: *rocm
   hsa-rocr-dev: *rocm
   comgr: *rocm
   rocm-core: *rocm
+  rocm-smi-lib: *rocm
   rocm-cmake: *rocm
   rocminfo: *rocm
   rocprim: *rocm
+  rocrand: *rocm
   rocthrust: *rocm
   rocprofiler-register: *rocm
   roctracer-dev-api: *rocm

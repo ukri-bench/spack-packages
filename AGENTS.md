@@ -14,6 +14,7 @@ spack_pkgs/spack_repo/ukri_bench/
   repo.yaml                        # namespace and Package API version
   packages/
     bench_dolfinx/package.py       # DOLFINx benchmark (CMake; CPU/CUDA/ROCm)
+    bench_flamegpu/package.py      # FLAME GPU 2 benchmark (CMake; CUDA/ROCm only)
     fenics_dolfinx/package.py      # builtin fenics-dolfinx + nvcc patch for 0.11
     mesa/package.py                # builtin mesa + glibc 2.43 (C23) patch for 24.3-25.0
     nemo/package.py                # NEMO ocean model (makenemo/FCM)
@@ -73,7 +74,7 @@ With Spack available:
 
 ```console
 spack repo add spack_pkgs/spack_repo/ukri_bench
-spack audit packages bench-dolfinx nemo
+spack audit packages bench-dolfinx bench-flamegpu nemo
 spack spec bench-dolfinx
 spack spec nemo +openmp
 ```
@@ -85,12 +86,14 @@ There is no local test suite; CI is the integration test.
 - `ci.yml`: ruff, then `spack audit` and `spack spec` for several variants,
   plus a few specs that must be rejected, against the pinned spack-packages
   commit.
-- `build-bench-dolfinx.yml`, `build-nemo.yml`: call `build-package.yml`, which
-  builds the package on each OS image in its matrix, checks the installed
-  `executable`, and runs the caller's smoke test. bench-dolfinx's GPU builds
-  run after its CPU build (which caches their shared dependencies) and are
-  compile-only. Dependencies are taken from
-  and pushed to the Spack OCI build cache
+- `build-bench-dolfinx.yml`, `build-bench-flamegpu.yml`, `build-nemo.yml`:
+  call `build-package.yml`, which builds the package on each OS image in its
+  matrix, checks the installed `executable`, and runs the caller's smoke test.
+  bench-dolfinx's GPU builds run after its CPU build (which caches their shared
+  dependencies) and are compile-only. bench-flamegpu has compile-only GPU
+  builds only; its CUDA build links NVIDIA driver libraries the runners lack,
+  so its smoke test does the shared-library check itself, ignoring those.
+  Dependencies are taken from and pushed to the Spack OCI build cache
   `ghcr.io/ukri-bench/spack-packages-buildcache`; the package itself is always
   built from source. Dependencies built from source are pushed as soon as each
   is installed (Spack autopush), and the cache index is updated even when the

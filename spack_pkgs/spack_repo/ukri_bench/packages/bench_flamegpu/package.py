@@ -38,6 +38,8 @@ class BenchFlamegpu(CMakePackage, CudaPackage, ROCmPackage):
     requires("+cuda", "+rocm", policy="one_of", msg="Build with either +cuda or +rocm.")
     conflicts("cuda_arch=none", when="+cuda", msg="A CUDA architecture must be specified.")
 
+    # FLAME GPU's CMake enables C as well as C++
+    depends_on("c", type="build")
     depends_on("cxx", type="build")
     depends_on("cmake@3.25.2:", type="build")
     # The benchmark records `git describe` of its source in its output

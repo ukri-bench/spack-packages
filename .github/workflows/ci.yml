@@ -46,7 +46,7 @@ jobs:
         run: |
           spack repo add "${GITHUB_WORKSPACE}/spack_pkgs/spack_repo/ukri_bench"
           # fenics-dolfinx and mesa are builtin packages plus a patch; audit only our own
-          spack audit packages bench-dolfinx nemo
+          spack audit packages bench-dolfinx bench-flamegpu nemo
           # Concretize with the build workflows' concretizer settings and package requirements
           spec() { spack -C .github/spack spec "$@"; }
           set -x
@@ -57,6 +57,10 @@ jobs:
           spec bench-dolfinx +rocm amdgpu_target=gfx90a
           spec bench-dolfinx@main +cuda cuda_arch=90
           spec bench-dolfinx@main +rocm amdgpu_target=gfx90a
+          # GPU only; keep in sync with build-bench-flamegpu.yml
+          spec bench-flamegpu +cuda cuda_arch=90
+          spec bench-flamegpu +rocm amdgpu_target=gfx90a
+          spec bench-flamegpu@main +cuda cuda_arch=90
           spec nemo
           spec nemo config=BENCH +ice +pisces
           spec nemo ~mpi
@@ -64,7 +68,9 @@ jobs:
           spec nemo +openmp +openmp_offload openmp_flags=-fopenmp
           # Unsupported combinations must be rejected
           for s in "bench-dolfinx +cuda +rocm cuda_arch=90 amdgpu_target=gfx90a" \
-              "bench-dolfinx +cuda" "nemo +openmp +openmp_offload" "nemo config=GENERIC"; do
+              "bench-dolfinx +cuda" "bench-flamegpu" "bench-flamegpu +cuda" \
+              "bench-flamegpu +cuda +rocm cuda_arch=90 amdgpu_target=gfx90a" \
+              "nemo +openmp +openmp_offload" "nemo config=GENERIC"; do
             # shellcheck disable=SC2086
             if spec ${s}; then echo "::error::${s} should be rejected"; exit 1; fi
           done

@@ -1,0 +1,52 @@
+name: Build bench-flamegpu
+
+on:
+  push:
+    branches: [main]
+    paths: &paths
+      - spack_pkgs/spack_repo/ukri_bench/packages/bench_flamegpu/**
+      - spack_pkgs/spack_repo/ukri_bench/packages/mesa/**
+      - spack_pkgs/spack_repo/ukri_bench/repo.yaml
+      - .github/workflows/build-package.yml
+      - .github/spack/**
+      - .github/workflows/build-bench-flamegpu.yml
+  pull_request:
+    paths: *paths
+  schedule:
+    # Weekly, to catch upstream breakage (e.g. source downloads)
+    - cron: "0 3 * * 1"
+  workflow_dispatch:
+
+# Cancel superseded pull request runs; pushes to main finish so they populate the cache
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  # GPU only (there is no CPU build). Compile-only: runners have no GPU. Keep the
+  # specs in sync with ci.yml. CUDA/ROCm versions are pinned in
+  # .github/spack/packages.yaml.
+  gpu:
+    strategy:
+      fail-fast: false
+      matrix:
+        spec:
+          - bench-flamegpu +cuda cuda_arch=90
+          - bench-flamegpu +rocm amdgpu_target=gfx90a
+    permissions:
+      contents: read
+      packages: write # push to the OCI build cache
+    uses: ./.github/workflows/build-package.yml
+    with:
+      package: bench-flamegpu
+      spec: ${{ matrix.spec }}
+      # Not `executable:`, whose check fails on the NVIDIA driver libraries
+      # (libcuda, NVML) that CUDA builds link and runners lack
+      smoke-test: |
+        exe="${PREFIX}/bin/benchmark-flamegpu"
+        test -x "${exe}"
+        if ldd "${exe}" | grep "not found" | grep -vE "libcuda\.so|libnvidia-ml\.so"; then
+          exit 1
+        fi
+      # A cold cache builds llvm-amdgpu from source, which fills the runner's disk
+      free-disk: ${{ contains(matrix.spec, '+rocm') }}

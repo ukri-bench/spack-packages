@@ -2,6 +2,7 @@
 
 [![CI](https://github.com/ukri-bench/spack-packages/actions/workflows/ci.yml/badge.svg)](https://github.com/ukri-bench/spack-packages/actions/workflows/ci.yml)
 [![Build bench-dolfinx](https://github.com/ukri-bench/spack-packages/actions/workflows/build-bench-dolfinx.yml/badge.svg)](https://github.com/ukri-bench/spack-packages/actions/workflows/build-bench-dolfinx.yml)
+[![Build bench-flamegpu](https://github.com/ukri-bench/spack-packages/actions/workflows/build-bench-flamegpu.yml/badge.svg)](https://github.com/ukri-bench/spack-packages/actions/workflows/build-bench-flamegpu.yml)
 [![Build nemo](https://github.com/ukri-bench/spack-packages/actions/workflows/build-nemo.yml/badge.svg)](https://github.com/ukri-bench/spack-packages/actions/workflows/build-nemo.yml)
 
 A [Spack](https://spack.io) package repository (namespace `ukri_bench`) for the
@@ -14,6 +15,14 @@ UKRI Living Benchmarks.
   (built against DOLFINx 0.11). CPU by default; `+cuda
   cuda_arch=<arch>` or `+rocm amdgpu_target=<target>` for GPU builds (one of
   the two, with an architecture).
+- `bench-flamegpu`: the [FLAME GPU 2 benchmark](https://github.com/ukri-bench/benchmark-flamegpu).
+  Versions: `0.1.0` (the default) and `main`. GPU only: `+cuda
+  cuda_arch=<arch>` (CUDA 12.4 or later) or `+rocm amdgpu_target=<target>`
+  (ROCm 7 or later, built with the ROCm `llvm-amdgpu` C++ compiler). FLAME GPU
+  2 itself is built as part of the benchmark at the commit the benchmark pins;
+  it is not a separate package, as it has no install rules. `+seatbelts`
+  enables FLAME GPU's runtime error checks (off by default, as they slow the
+  benchmark).
 - `fenics-dolfinx`: the builtin package with one added patch for DOLFINx
   0.11, without which nvcc 13 aborts with an internal error on the header
   `dolfinx/mesh/EntityMap.h`. It overrides the builtin package while this
@@ -68,6 +77,8 @@ Then, for example:
 ```console
 spack install bench-dolfinx
 spack install bench-dolfinx +cuda cuda_arch=90
+spack install bench-flamegpu +cuda cuda_arch=90
+spack install bench-flamegpu +rocm amdgpu_target=gfx942
 spack install nemo config=BENCH
 spack install nemo +openmp %fortran=gcc
 spack install nemo +openmp +openmp_offload openmp_flags="-mp=gpu -gpu=cc90" %fortran=nvhpc
@@ -82,6 +93,9 @@ spack install nemo +openmp +openmp_offload openmp_flags="-mp=gpu -gpu=cc90" %for
   ```console
   mpiexec -n 2 bench_dolfinx --ndofs=10000 --degree=3 --nreps=10
   ```
+
+- `bench-flamegpu` installs the executable `benchmark-flamegpu`
+  (`benchmark-flamegpu --help` lists options).
 
 - `nemo` installs the build configuration under its prefix, with the
   executable at `<prefix>/EXP00/nemo`, and a `nemo-wrapper` script that
@@ -100,17 +114,18 @@ Python style is checked with [ruff](https://docs.astral.sh/ruff/)
 - [`ci.yml`](.github/workflows/ci.yml): ruff, then `spack audit` and
   `spack spec` for several variants of each package, against the pinned
   spack-packages commit.
-- [`build-bench-dolfinx.yml`](.github/workflows/build-bench-dolfinx.yml) and
+- [`build-bench-dolfinx.yml`](.github/workflows/build-bench-dolfinx.yml),
+  [`build-bench-flamegpu.yml`](.github/workflows/build-bench-flamegpu.yml) and
   [`build-nemo.yml`](.github/workflows/build-nemo.yml): build each package
   on Ubuntu and AlmaLinux (target `x86_64_v3`) with a pinned Spack release and
   [spack-packages](https://github.com/spack/spack-packages) commit, then
   check and smoke-test it. The OS releases are set in
   [`build-package.yml`](.github/workflows/build-package.yml) and the pins in
   [`.github/spack/versions.env`](.github/spack/versions.env). bench-dolfinx
-  is also built for CUDA and ROCm, at the versions pinned in
-  [`.github/spack/packages.yaml`](.github/spack/packages.yaml); the runners
-  have no GPU, so those builds are compile-only. The workflows run on changes to the package, weekly, and
-  on demand.
+  is also built for CUDA and ROCm, and bench-flamegpu only for those, at the
+  versions pinned in [`.github/spack/packages.yaml`](.github/spack/packages.yaml);
+  the runners have no GPU, so those builds are compile-only. The workflows run
+  on changes to the package, weekly, and on demand.
 
 Dependencies for the build workflows come from a Spack OCI build cache at
 `ghcr.io/ukri-bench/spack-packages-buildcache` (configured in
